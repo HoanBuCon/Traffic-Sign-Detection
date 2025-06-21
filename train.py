@@ -40,7 +40,7 @@ def train_model():
             imgsz=IMAGE_SIZE,
             batch=BATCH_SIZE,
             name='yolov8_traffic_sign_training', # Tên thư mục lưu kết quả
-            resume=True # Huấn luyện tiếp từ lần chạy trước
+            resume=False # Huấn luyện tiếp từ lần chạy trước
         )
         print("✅ Training completed successfully!")
         
