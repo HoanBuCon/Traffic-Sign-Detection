@@ -19,7 +19,7 @@ def train_model():
     # Bạn có thể thay đổi các giá trị này để thử nghiệm.
     PRETRAINED_MODEL = 'yolov8n.pt'  # yolov8n.pt, yolov8s.pt, yolov8m.pt, ...
     DATA_CONFIG = 'data.yaml'       # File cấu hình dataset
-    EPOCHS = 25                     # Số chu kỳ huấn luyện. Tăng lên để cải thiện độ chính xác.
+    EPOCHS = 100                    # Số chu kỳ huấn luyện. Tăng lên để cải thiện độ chính xác.
     IMAGE_SIZE = 640                # Kích thước ảnh đầu vào
     BATCH_SIZE = 8                  # Số ảnh xử lý trong 1 lần. Giảm nếu gặp lỗi bộ nhớ GPU.
 
@@ -39,7 +39,8 @@ def train_model():
             epochs=EPOCHS,
             imgsz=IMAGE_SIZE,
             batch=BATCH_SIZE,
-            name='yolov8_traffic_sign_training' # Tên thư mục lưu kết quả
+            name='yolov8_traffic_sign_training', # Tên thư mục lưu kết quả
+            resume=True # Huấn luyện tiếp từ lần chạy trước
         )
         print("✅ Training completed successfully!")
         
