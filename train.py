@@ -1,10 +1,35 @@
 import torch
 import os
 from ultralytics import YOLO
+import shutil
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+def check_disk_space(drive):
+    total, used, free = shutil.disk_usage(drive)
+    return free / (1024 ** 3)  # Dung lượng trống (GB)
+
+def check_environment():
+    print("🔍 Checking environment...")
+    if torch.cuda.is_available():
+        print(f"✅ GPU: {torch.cuda.get_device_name(0)}")
+    else:
+        print("⚠️ No GPU. Using CPU (slow).")
+    
+    c_free = check_disk_space("C:\\")
+    d_free = check_disk_space("D:\\")
+    print(f"💾 Drive C: {c_free:.2f} GB free")
+    print(f"💾 Drive D: {d_free:.2f} GB free")
+    if c_free < 1:
+        print("🚨 Warning: Drive C is low (<1GB). Free up space or move swap file to D.")
+    if d_free < 10:
+        print("🚨 Warning: Drive D is low (<10GB). Dataset and logs may fill it up.")
 
 def train_model():
     # 1. KIỂM TRA MÔI TRƯỜNG
     # =================================
+    check_disk_space("C:\\")  # Kiểm tra dung lượng ổ C:
+    check_environment()  # Gọi hàm kiểm tra môi trường và dung lượng ổ
     # Kiểm tra xem có GPU (như card NVIDIA) để tăng tốc độ huấn luyện không.
     if torch.cuda.is_available():
         print("✅ GPU is available! We will use it for training.")
@@ -17,11 +42,12 @@ def train_model():
     # 2. CÁC THAM SỐ HUẤN LUYỆN
     # =================================
     # Bạn có thể thay đổi các giá trị này để thử nghiệm.
-    PRETRAINED_MODEL = 'yolov8n.pt'  # yolov8n.pt, yolov8s.pt, yolov8m.pt, ...
-    DATA_CONFIG = 'data.yaml'       # File cấu hình dataset
-    EPOCHS = 100                    # Số chu kỳ huấn luyện. Tăng lên để cải thiện độ chính xác.
-    IMAGE_SIZE = 640                # Kích thước ảnh đầu vào
-    BATCH_SIZE = 8                  # Số ảnh xử lý trong 1 lần. Giảm nếu gặp lỗi bộ nhớ GPU.
+    PRETRAINED_MODEL = 'yolov8n.pt'
+    DATA_CONFIG = 'data.yaml'
+    EPOCHS = 25
+    IMAGE_SIZE = 640  # Giảm từ 640 để tiết kiệm bộ nhớ GPU
+    BATCH_SIZE = 8    # Giảm từ 8 để tránh CUDA out of memory
+    WORKERS = 2       # Tắt multiprocessing hoặc để là 2 đến 4 để giảm lỗi shared file mapping
 
 
     # 3. HUẤN LUYỆN MÔ HÌNH
@@ -39,6 +65,7 @@ def train_model():
             epochs=EPOCHS,
             imgsz=IMAGE_SIZE,
             batch=BATCH_SIZE,
+            workers=WORKERS,
             name='yolov8_traffic_sign_training', # Tên thư mục lưu kết quả
             resume=False # Huấn luyện tiếp từ lần chạy trước
         )
@@ -88,4 +115,4 @@ def run_inference(weights_path):
 if __name__ == '__main__':
     best_weights_path = train_model()
     # Bỏ comment (xóa dấu #) ở dòng dưới để tự động chạy inference sau khi train xong.
-    # run_inference(best_weights_path) 
+    # run_inference(best_weights_path)
