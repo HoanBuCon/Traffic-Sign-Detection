@@ -3,55 +3,55 @@ val: dataset/images/val
 
 nc: 52
 names:
-  - class_0
-  - class_1
-  - class_2
-  - class_3
-  - class_4
-  - class_5
-  - class_6
-  - class_7
-  - class_8
-  - class_9
-  - class_10
-  - class_11
-  - class_12
-  - class_13
-  - class_14
-  - class_15
-  - class_16
-  - class_17
-  - class_18
-  - class_19
-  - class_20
-  - class_21
-  - class_22
-  - class_23
-  - class_24
-  - class_25
-  - class_26
-  - class_27
-  - class_28
-  - class_29
-  - class_30
-  - class_31
-  - class_32
-  - class_33
-  - class_34
-  - class_35
-  - class_36
-  - class_37
-  - class_38
-  - class_39
-  - class_40
-  - class_41
-  - class_42
-  - class_43
-  - class_44
-  - class_45
-  - class_46
-  - class_47
-  - class_48
-  - class_49
-  - class_50
-  - class_51 
+- Duong_nguoi_di_bo_cat_ngang
+- Duong_giao_nhau_(nga_ba_ben_phai)
+- Cam_di_nguoc_chieu
+- Phai_di_vong_sang_ben_phai
+- Giao_nhau_voi_duong_dong_cap
+- Giao_nhau_voi_duong_khong_uu_tien
+- Cho_ngoat_nguy_hiem_vong_ben_trai
+- Cam_re_trai
+- Ben_xe_buyt
+- Noi_giao_nhau_chay_theo_vong_xuyen
+- Cam_dung_va_do_xe
+- Cho_quay_xe
+- Bien_gop_lan_duong_theo_phuong_tien
+- Di_cham
+- Cam_xe_tai
+- Duong_bi_thu_hep_ve_phia_phai
+- Gioi_han_chieu_cao
+- Cam_quay_dau
+- Cam_o_to_khach_va_o_to_tai
+- Cam_re_phai_va_quay_dau
+- Cam_o_to
+- Duong_bi_thu_hep_ve_phia_trai
+- Go_giam_toc_phia_truoc
+- Cam_xe_hai_va_ba_banh
+- Kiem_tra
+- Chi_danh_cho_xe_may*
+- Chuong_ngoai_vat_phia_truoc
+- Tre_em
+- Xe_tai_va_xe_cong*
+- Cam_mo_to_va_xe_may
+- Chi_danh_cho_xe_tai*
+- Duong_co_camera_giam_sat
+- Cam_re_phai
+- Nhieu_cho_ngoat_nguy_hiem_lien_tiep,_cho_dau_tien_sang_phai
+- Cam_xe_so-mi_ro-mooc
+- Cam_re_trai_va_phai
+- Cam_di_thang_va_re_phai
+- Duong_giao_nhau_(nga_ba_ben_trai)
+- Gioi_han_toc_do_(50km/h)
+- Gioi_han_toc_do_(60km/h)
+- Gioi_han_toc_do_(80km/h)
+- Gioi_han_toc_do_(40km/h)
+- Cac_xe_chi_duoc_re_trai
+- Chieu_cao_tinh_khong_thuc_te
+- Nguy_hiem_khac
+- Duong_mot_chieu
+- Cam_do_xe
+- Cam_o_to_quay_dau_xe_(duoc_re_trai)
+- Giao_nhau_voi_duong_sat_co_rao_chan
+- Cam_re_trai_va_quay_dau_xe
+- Cho_ngoat_nguy_hiem_vong_ben_phai
+- Chu_y_chuong_ngai_vat_vong_tranh_sang_ben_phai
