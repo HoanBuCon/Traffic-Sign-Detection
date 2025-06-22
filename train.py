@@ -44,7 +44,7 @@ def train_model():
     # Bạn có thể thay đổi các giá trị này để thử nghiệm.
     PRETRAINED_MODEL = 'yolov8n.pt'
     DATA_CONFIG = 'data.yaml'
-    EPOCHS = 25
+    EPOCHS = 100
     IMAGE_SIZE = 640  # Giảm từ 640 để tiết kiệm bộ nhớ GPU
     BATCH_SIZE = 8    # Giảm từ 8 để tránh CUDA out of memory
     WORKERS = 4       # Tắt multiprocessing hoặc để là 2 đến 4 để giảm lỗi shared file mapping
