@@ -64,8 +64,8 @@ pip install -r requirements.txt
 python train.py
 ```
 
-### 5. Detect traffic sign
-- Place the traffic sign images you want to detect into the folder: ```.\Traffic-Sign-Detection\input```
+### 5. Detect traffic signs
+- Place the traffic signs images you want to detect into the folder: ```.\Traffic-Sign-Detection\input```
 - Open ***Terminal*** and run the detection script:
 ```bash
 python predict.py
