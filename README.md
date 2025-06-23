@@ -69,7 +69,7 @@ python train.py
 
 - 📁 `input` — Place your input images here 
 - 📁 `output` — Detected images will be saved here  
-- 📁 `all_weights` — Folder for storing trained model weights  
+- 📁 `all_weight` — Folder for storing trained model weights  
 #### ❗The final path should look like:
 - ```.\Traffic-Sign-Detection\input```
 - ```.\Traffic-Sign-Detection\output```
@@ -79,7 +79,7 @@ python train.py
 └── Traffic-Sign-Detection\
     ├── input
     ├── output
-    └── all_weights
+    └── all_weight
 ```
 #### ✅ Make sure these folders are created before running train.py or predict.py.
 
