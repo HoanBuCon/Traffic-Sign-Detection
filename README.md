@@ -4,13 +4,63 @@
 <hr>
 
 <!-- LƯU Ý: Nếu có &#x26; thì phải sửa thành & -->
-<h3>Collabrator:</h3> 
+<style>
+.collaborators-row {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+  flex-wrap: wrap;
+}
 
-- <a href="https://github.com/davidislearninghowtocode" target="_blank"><b>David Vu</b></a>
- 
-- <a href="https://github.com/AnDpTri" target="_blank"><b>The Peak</b></a>
+.collaborator-card {
+  background-color: #1e1e2f;
+  color: #f0f0f0;
+  padding: 20px;
+  border-radius: 12px;
+  width: 200px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
 
-- <a href="https://github.com/HoanBuCon" target="_blank"><b>Hoàn Bự Con</b></a>
+.collaborator-card:hover {
+  transform: translateY(-6px);
+  background-color: #2c2c44;
+}
+
+.collaborator-card a {
+  text-decoration: none;
+  color: #00bcd4;
+  font-weight: bold;
+  font-size: 18px;
+  display: inline-block;
+  margin-top: 10px;
+}
+
+.collaborator-card a:hover {
+  color: #1de9b6;
+}
+</style>
+
+<div class="collaborators-row">
+  <div class="collaborator-card">
+    <div>🧠</div>
+    <a href="https://github.com/davidislearninghowtocode" target="_blank">David Vu</a>
+  </div>
+
+  <div class="collaborator-card">
+    <div>💻</div>
+    <a href="https://github.com/AnDpTri" target="_blank">The Peak</a>
+  </div>
+
+  <div class="collaborator-card">
+    <div>💻</div>
+    <a href="https://github.com/HoanBuCon" target="_blank">Hoàn Bự Con</a>
+  </div>
+</div>
+
 
 <hr>
 
