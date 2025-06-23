@@ -241,100 +241,87 @@ class VisualizationUtils:
     
     @staticmethod
     def draw_detections(image: np.ndarray, detections: List[dict], 
-                       class_names: List[str] = None, 
+                       class_names = None, 
                        confidence_threshold: float = 0.25) -> np.ndarray:
         """
         Draw detection results on image with improved visualization
-        
         Args:
             image: Input image
             detections: List of detection dictionaries
-            class_names: List of class names
+            class_names: Dict of class names (key: mã nhãn, value: tên không dấu)
             confidence_threshold: Minimum confidence to display
-            
         Returns:
             Image with detections drawn
         """
         result_image = image.copy()
-        
-        # Define color map for different classes
         color_map = {
-            'speed_limit': (0, 255, 0),  # Green
-            'warning': (0, 165, 255),    # Orange
-            'prohibition': (0, 0, 255),   # Red
-            'mandatory': (255, 0, 0),     # Blue
-            'other': (128, 128, 128)      # Gray
+            'speed_limit': (0, 255, 0),
+            'warning': (0, 165, 255),
+            'prohibition': (0, 0, 255),
+            'mandatory': (255, 0, 0),
+            'other': (128, 128, 128)
         }
-        
         for detection in detections:
             if detection['confidence'] < confidence_threshold:
                 continue
-                
             bbox = detection['bbox']
             class_id = detection['class_id']
             confidence = detection['confidence']
-            
-            # Get coordinates
             x1, y1, x2, y2 = map(int, bbox)
-            
-            # Get class name
-            class_name = class_names[class_id] if class_names and class_id < len(class_names) else f"Class {class_id}"
-            
-            # Determine color based on class type
+            # Lấy tên lớp từ dict
+            if isinstance(class_names, dict):
+                class_name = class_names.get(class_id, f"Class {class_id}")
+            elif isinstance(class_names, list) and isinstance(class_id, int) and class_id < len(class_names):
+                class_name = class_names[class_id]
+            else:
+                class_name = f"Class {class_id}"
             color = color_map['other']
             for category, c in color_map.items():
                 if category in class_name.lower():
                     color = c
                     break
-            
-            # Draw bounding box with thickness based on confidence
             thickness = max(1, int(3 * confidence))
             cv2.rectangle(result_image, (x1, y1), (x2, y2), color, thickness)
-            
-            # Draw filled background for label
             label = f"{class_name}: {confidence:.2f}"
             label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, thickness)[0]
             cv2.rectangle(result_image, 
                          (x1, y1 - label_size[1] - 10), 
                          (x1 + label_size[0], y1),
                          color, -1)
-            
-            # Draw label text in white
             cv2.putText(result_image, label, 
                        (x1, y1 - 5),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 
                        thickness)
-        
         return result_image
     
     @staticmethod
     def save_detection_result(image: np.ndarray, output_path: str, 
-                            filename: str, detections: List[dict] = None):
+                            filename: str, detections: List[dict] = None, class_names=None):
         """
         Save detection result with metadata
-        
         Args:
             image: Image with drawn detections
             output_path: Directory to save results
             filename: Output filename
             detections: List of detection dictionaries
+            class_names: Dict ánh xạ số -> mã nhãn
         """
-        # Create output directory if it doesn't exist
         os.makedirs(output_path, exist_ok=True)
-        
-        # Save image with detections
         image_path = os.path.join(output_path, filename)
         cv2.imwrite(image_path, image)
-        
-        # Save detection metadata if provided
         if detections:
             base_name = os.path.splitext(filename)[0]
             metadata_path = os.path.join(output_path, f"{base_name}_detections.txt")
-            
             with open(metadata_path, 'w') as f:
                 for i, det in enumerate(detections, 1):
+                    class_id = det['class_id']
+                    # Ánh xạ số sang mã nhãn nếu có class_names
+                    if class_names and str(class_id) in class_names:
+                        class_label = class_names[str(class_id)]
+                    else:
+                        class_label = str(class_id)
                     f.write(f"Detection {i}:\n")
-                    f.write(f"  Class ID: {det['class_id']}\n")
+                    f.write(f"  Class: {class_label}\n")
                     f.write(f"  Confidence: {det['confidence']:.4f}\n")
                     f.write(f"  Bounding Box: {det['bbox']}\n")
                     f.write("\n")

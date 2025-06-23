@@ -8,6 +8,7 @@ import numpy as np
 from config import Config
 from utils import ImageEnhancer, VisualizationUtils, FileUtils
 import glob
+import yaml
 
 # Hàm tạo thư mục predict mới
 def get_new_predict_dir(base_dir="output"):
@@ -25,15 +26,23 @@ class TrafficSignDetector:
         Initialize the traffic sign detector
         
         Args:
-            model_path: Path to the trained model (if None, auto-select latest best_traffic_sign_model_*.pt)
+            model_path: Path to the trained model (if None, auto-select latest best.pt in all_weight)
             predictions_dir: Directory to save predictions (if None, auto-create new folder)
         """
         if model_path is None:
-            model_files = glob.glob("best_traffic_sign_model_*.pt")
-            if not model_files:
-                raise FileNotFoundError("No trained model found! Please train the model first.")
-            model_path = max(model_files, key=os.path.getctime)
-            print(f"[INFO] Using latest model: {model_path}")
+            # Tìm thư mục trainX mới nhất trong all_weight
+            all_weight_dir = 'all_weight'
+            train_dirs = [d for d in os.listdir(all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(all_weight_dir, d))]
+            if not train_dirs:
+                raise FileNotFoundError("No trained model found in all_weight! Please train the model first.")
+            # Sắp xếp theo số thứ tự tăng dần
+            train_dirs_sorted = sorted(train_dirs, key=lambda x: int(x.replace('train', '')) if x.replace('train', '').isdigit() else 0)
+            latest_train_dir = os.path.join(all_weight_dir, train_dirs_sorted[-1])
+            best_pt_path = os.path.join(latest_train_dir, 'best.pt')
+            if not os.path.exists(best_pt_path):
+                raise FileNotFoundError(f"No best.pt found in {latest_train_dir}!")
+            model_path = best_pt_path
+            print(f"[INFO] Using latest best.pt: {model_path}")
         self.model = YOLO(model_path)
         self.image_enhancer = ImageEnhancer()
         self.config = Config
@@ -42,6 +51,11 @@ class TrafficSignDetector:
         else:
             self.predictions_dir = predictions_dir
         print(f"[INFO] Saving predictions to: {self.predictions_dir}")
+        
+        # Đọc class_names từ data.yaml
+        with open('data.yaml', 'r', encoding='utf-8') as f:
+            data_yaml = yaml.safe_load(f)
+            self.class_names = data_yaml.get('names', {})
         
     def enhance_image_for_inference(self, image: np.ndarray) -> np.ndarray:
         """
@@ -109,10 +123,20 @@ class TrafficSignDetector:
         for result in results:
             boxes = result.boxes
             for box in boxes:
+                class_idx = int(box.cls)
+                # Lấy key mã nhãn từ dict theo chỉ số
+                if isinstance(self.class_names, dict):
+                    keys = list(self.class_names.keys())
+                    if class_idx < len(keys):
+                        class_id = keys[class_idx]
+                    else:
+                        class_id = str(class_idx)
+                else:
+                    class_id = str(class_idx)
                 detection = {
-                    'bbox': box.xyxy[0].tolist(),  # Convert to absolute coordinates
+                    'bbox': box.xyxy[0].tolist(),
                     'confidence': float(box.conf),
-                    'class_id': int(box.cls)
+                    'class_id': class_id
                 }
                 detections.append(detection)
         
@@ -120,7 +144,7 @@ class TrafficSignDetector:
         annotated_image = VisualizationUtils.draw_detections(
             image,
             detections,
-            class_names=self.model.names,
+            class_names=self.class_names,
             confidence_threshold=self.config.CONFIDENCE_THRESHOLD
         )
         
@@ -132,7 +156,8 @@ class TrafficSignDetector:
                 annotated_image,
                 self.predictions_dir,
                 output_filename,
-                detections
+                detections,
+                class_names=self.class_names
             )
         
         return annotated_image, detections
