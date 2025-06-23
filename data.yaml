@@ -1,54 +1,53 @@
-
 # Dataset configuration
-path: C:\Users\andan\OneDrive\Desktop\Traffic-Sign-Detection\dataset
+path: C:\Users\andan\OneDrive\Desktop\Traffic-Sign-Detection\datasetv2
 train: images/train
 val: images/val
 
 # Number of classes
-nc: 43  # Adjust based on your traffic sign classes
+nc: 43  # Số lượng lớp biển báo giao thông
 
-# Class names (example - adjust based on your dataset)
+# Tên các lớp (bằng tiếng Việt, có dấu cách)
 names:
-  0: speed_limit_20
-  1: speed_limit_30
-  2: speed_limit_50
-  3: speed_limit_60
-  4: speed_limit_70
-  5: speed_limit_80
-  6: end_of_speed_limit_80
-  7: speed_limit_100
-  8: speed_limit_120
-  9: no_passing
-  10: no_passing_for_vehicles_over_3_5_metric_tons
-  11: right_of_way_at_the_next_intersection
-  12: priority_road
-  13: yield
-  14: stop
-  15: no_vehicles
-  16: vehicles_over_3_5_metric_tons_prohibited
-  17: no_entry
-  18: general_caution
-  19: dangerous_curve_left
-  20: dangerous_curve_right
-  21: double_curve
-  22: bumpy_road
-  23: slippery_road
-  24: road_narrows_on_the_right
-  25: road_work
-  26: traffic_signals
-  27: pedestrians
-  28: children_crossing
-  29: bicycles_crossing
-  30: snow
-  31: wild_animals_crossing
-  32: end_of_all_speed_and_passing_limits
-  33: turn_right_ahead
-  34: turn_left_ahead
-  35: ahead_only
-  36: go_straight_or_right
-  37: go_straight_or_left
-  38: keep_right
-  39: keep_left
-  40: roundabout_mandatory
-  41: end_of_no_passing
-  42: end_of_no_passing_by_vehicles_over_3_5_metric_tons
+  0: "giới hạn tốc độ 20"
+  1: "giới hạn tốc độ 30"
+  2: "giới hạn tốc độ 50"
+  3: "giới hạn tốc độ 60"
+  4: "giới hạn tốc độ 70"
+  5: "giới hạn tốc độ 80"
+  6: "hết giới hạn tốc độ 80"
+  7: "giới hạn tốc độ 100"
+  8: "giới hạn tốc độ 120"
+  9: "cấm vượt"
+  10: "cấm vượt cho xe trên 3.5 tấn"
+  11: "được ưu tiên tại ngã tư tiếp theo"
+  12: "đường ưu tiên"
+  13: "nhường đường"
+  14: "dừng lại"
+  15: "cấm các loại xe"
+  16: "cấm xe trên 3.5 tấn"
+  17: "cấm đi vào"
+  18: "chú ý chung"
+  19: "đường cong nguy hiểm bên trái"
+  20: "đường cong nguy hiểm bên phải"
+  21: "đường cong kép"
+  22: "đường gồ ghề"
+  23: "đường trơn trượt"
+  24: "đường thu hẹp bên phải"
+  25: "đang thi công"
+  26: "đèn giao thông"
+  27: "người đi bộ"
+  28: "trẻ em qua đường"
+  29: "xe đạp qua đường"
+  30: "tuyết"
+  31: "động vật hoang dã qua đường"
+  32: "hết mọi giới hạn tốc độ và vượt"
+  33: "rẽ phải phía trước"
+  34: "rẽ trái phía trước"
+  35: "chỉ được đi thẳng"
+  36: "đi thẳng hoặc rẽ phải"
+  37: "đi thẳng hoặc rẽ trái"
+  38: "đi bên phải"
+  39: "đi bên trái"
+  40: "vòng xuyến bắt buộc"
+  41: "hết cấm vượt"
+  42: "hết cấm vượt cho xe trên 3.5 tấn"

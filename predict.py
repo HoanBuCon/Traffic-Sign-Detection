@@ -7,18 +7,41 @@ from typing import List, Union, Tuple
 import numpy as np
 from config import Config
 from utils import ImageEnhancer, VisualizationUtils, FileUtils
+import glob
+
+# Hàm tạo thư mục predict mới
+def get_new_predict_dir(base_dir="output"):
+    i = 1
+    while True:
+        predict_dir = os.path.join(base_dir, f"predict{i}")
+        if not os.path.exists(predict_dir):
+            os.makedirs(predict_dir)
+            return predict_dir
+        i += 1
 
 class TrafficSignDetector:
-    def __init__(self, model_path: str = Config.BEST_MODEL_PATH):
+    def __init__(self, model_path: str = None, predictions_dir: str = None):
         """
         Initialize the traffic sign detector
         
         Args:
-            model_path: Path to the trained model
+            model_path: Path to the trained model (if None, auto-select latest best_traffic_sign_model_*.pt)
+            predictions_dir: Directory to save predictions (if None, auto-create new folder)
         """
+        if model_path is None:
+            model_files = glob.glob("best_traffic_sign_model_*.pt")
+            if not model_files:
+                raise FileNotFoundError("No trained model found! Please train the model first.")
+            model_path = max(model_files, key=os.path.getctime)
+            print(f"[INFO] Using latest model: {model_path}")
         self.model = YOLO(model_path)
         self.image_enhancer = ImageEnhancer()
         self.config = Config
+        if predictions_dir is None:
+            self.predictions_dir = get_new_predict_dir(self.config.OUTPUT_DIR)
+        else:
+            self.predictions_dir = predictions_dir
+        print(f"[INFO] Saving predictions to: {self.predictions_dir}")
         
     def enhance_image_for_inference(self, image: np.ndarray) -> np.ndarray:
         """
@@ -104,10 +127,10 @@ class TrafficSignDetector:
         # Save result if requested
         if save_result:
             output_filename = os.path.basename(image_path)
-            output_path = os.path.join(self.config.PREDICTIONS_DIR, output_filename)
+            output_path = os.path.join(self.predictions_dir, output_filename)
             VisualizationUtils.save_detection_result(
                 annotated_image,
-                self.config.PREDICTIONS_DIR,
+                self.predictions_dir,
                 output_filename,
                 detections
             )
@@ -122,7 +145,7 @@ class TrafficSignDetector:
             input_dir: Directory containing input images
         """
         # Create output directory if it doesn't exist
-        os.makedirs(self.config.PREDICTIONS_DIR, exist_ok=True)
+        os.makedirs(self.predictions_dir, exist_ok=True)
         
         # Get all image files
         image_files = FileUtils.get_image_files(input_dir)
