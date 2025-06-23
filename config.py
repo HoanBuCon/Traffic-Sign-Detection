@@ -11,7 +11,7 @@ class Config:
     
     # Model
     MODEL_SIZE = "yolov8m.pt"  # Using YOLOv8m as specified
-    EPOCHS = 5
+    EPOCHS = 1
     BATCH_SIZE = 8
     IMAGE_SIZE = 640
     

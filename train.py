@@ -5,22 +5,37 @@ from config import Config
 from utils import DataAugmentation
 import torch
 from pathlib import Path
+import glob
 
 class TrafficSignTrainer:
     def __init__(self):
         """Initialize the trainer with configuration"""
         self.config = Config
         self.data_augmentation = DataAugmentation(image_size=self.config.IMAGE_SIZE)
+        # Thêm biến đếm số lần train
+        self.all_weight_dir = 'all_weight'
+        os.makedirs(self.all_weight_dir, exist_ok=True)
+        
+    def get_next_train_dir(self):
+        """Tìm tên thư mục train tiếp theo trong all_weight"""
+        existing = [d for d in os.listdir(self.all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(self.all_weight_dir, d))]
+        nums = [int(d.replace('train', '')) for d in existing if d.replace('train', '').isdigit()]
+        next_num = max(nums) + 1 if nums else 1
+        return os.path.join(self.all_weight_dir, f'train{next_num}')
         
     def setup_training(self):
         """Setup training environment and create necessary files/directories"""
         # Create necessary directories
         self.config.create_directories()
         
-        # Generate dataset.yaml
-        dataset_content = self.config.get_dataset_yaml()
-        with open('data.yaml', 'w') as f:
-            f.write(dataset_content)
+        # Generate dataset.yaml only if it doesn't exist
+        if not os.path.exists('data.yaml'):
+            dataset_content = self.config.get_dataset_yaml()
+            with open('data.yaml', 'w') as f:
+                f.write(dataset_content)
+            print("Created new data.yaml file")
+        else:
+            print("Using existing data.yaml file")
             
         # Print training configuration
         print("\nTraining Configuration:")
@@ -76,20 +91,20 @@ class TrafficSignTrainer:
                 close_mosaic=10,  # Close mosaic augmentation for last 10 epochs
             )
             
-            # Save the trained model with timestamp
-            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            best_model_name = f"best_traffic_sign_model_{timestamp}.pt"
-            last_model_name = f"last_traffic_sign_model_{timestamp}.pt"
+            # Lưu best.pt và last.pt vào thư mục all_weight/trainX
             best_model_path = os.path.join('runs', 'traffic_sign_detection', 'weights', 'best.pt')
             last_model_path = os.path.join('runs', 'traffic_sign_detection', 'weights', 'last.pt')
-            
+            train_dir = self.get_next_train_dir()
+            os.makedirs(train_dir, exist_ok=True)
             if os.path.exists(best_model_path):
-                os.replace(best_model_path, best_model_name)
-                print(f"\nBest model saved to: {best_model_name}")
+                dest_best = os.path.join(train_dir, 'best.pt')
+                os.replace(best_model_path, dest_best)
+                print(f"\nBest model saved to: {dest_best}")
             
             if os.path.exists(last_model_path):
-                os.replace(last_model_path, last_model_name)
-                print(f"Last model saved to: {last_model_name}")
+                dest_last = os.path.join(train_dir, 'last.pt')
+                os.replace(last_model_path, dest_last)
+                print(f"Last model saved to: {dest_last}")
             
             # Print training results
             print("\nTraining Results:")

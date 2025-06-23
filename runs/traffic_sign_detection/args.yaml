@@ -2,7 +2,7 @@ task: detect
 mode: train
 model: yolov8m.pt
 data: data.yaml
-epochs: 5
+epochs: 1
 time: null
 patience: 50
 batch: 8
