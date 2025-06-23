@@ -1,77 +1,150 @@
 import os
-import glob
+import cv2
+import torch
 from ultralytics import YOLO
-import argparse
+from pathlib import Path
+from typing import List, Union, Tuple
+import numpy as np
+from config import Config
+from utils import ImageEnhancer, VisualizationUtils, FileUtils
 
-def predict(weights_path, source_path):
-    """
-    Chạy nhận diện YOLOv8 trên một thư mục ảnh.
-    """
-    if not os.path.exists(source_path):
-        print(f"❌ Lỗi: Thư mục nguồn '{source_path}' không tồn tại.")
-        return
-
-    if not any(fname.lower().endswith(('.png', '.jpg', '.jpeg')) for fname in os.listdir(source_path)):
-        print(f"❌ Lỗi: Không tìm thấy ảnh nào trong '{source_path}'.")
-        print("   Vui lòng thêm ảnh của bạn vào thư mục này rồi chạy lại script.")
-        return
+class TrafficSignDetector:
+    def __init__(self, model_path: str = Config.BEST_MODEL_PATH):
+        """
+        Initialize the traffic sign detector
         
-    print(f"🔎 Đang tải mô hình từ: {weights_path}")
-    model = YOLO(weights_path)
-    
-    print(f"🚀 Bắt đầu nhận diện trên các ảnh trong: {source_path}")
-    results = model.predict(
-        source=source_path,
-        conf=0.25,      # Ngưỡng tin cậy (có thể điều chỉnh)
-        save=True,      # Lưu lại ảnh kết quả với các khung bao
-        save_txt=True   # Lưu kết quả dưới dạng file text
-    )
-    
-    # predict() là một generator, cần duyệt qua để kích hoạt việc lưu file
-    for _ in results:
-        pass
+        Args:
+            model_path: Path to the trained model
+        """
+        self.model = YOLO(model_path)
+        self.image_enhancer = ImageEnhancer()
+        self.config = Config
         
-    print("\\n✅ Quá trình nhận diện hoàn tất!")
-    
-    # Tìm thư mục predict mới nhất để thông báo cho người dùng
-    predict_dirs = glob.glob('runs/detect/predict*')
-    latest_predict_dir = max(predict_dirs, key=os.path.getmtime)
-    print(f"📂 Kết quả đã được lưu tại: {os.path.abspath(latest_predict_dir)}")
-
-
-def find_latest_weights():
-    """
-    Tìm đường dẫn đến file best.pt từ lần huấn luyện gần nhất.
-    """
-    runs_dir = 'runs/detect'
-    if not os.path.exists(runs_dir):
-        return None
+    def enhance_image_for_inference(self, image: np.ndarray) -> np.ndarray:
+        """
+        Apply multiple enhancement techniques for better inference
         
-    train_dirs = [os.path.join(runs_dir, d) for d in os.listdir(runs_dir) if d.startswith('yolov8_traffic_sign_training')]
-    
-    if not train_dirs:
-        return None
+        Args:
+            image: Input image
+            
+        Returns:
+            Enhanced image
+        """
+        if not self.config.ENABLE_IMAGE_ENHANCEMENT:
+            return image
+            
+        # Apply denoising
+        image = self.image_enhancer.denoise_image(image)
         
-    latest_run_dir = max(train_dirs, key=os.path.getmtime)
-    weights_path = os.path.join(latest_run_dir, 'weights/best.pt')
+        # Apply sharpening
+        image = self.image_enhancer.sharpen_image(image)
+        
+        # Enhance contrast and brightness
+        image = self.image_enhancer.enhance_image(
+            image, 
+            enhancement_level=self.config.CONTRAST_ENHANCEMENT
+        )
+        
+        # Apply gamma correction
+        image = self.image_enhancer.adjust_gamma(
+            image, 
+            gamma=self.config.GAMMA_CORRECTION
+        )
+        
+        return image
     
-    if os.path.exists(weights_path):
-        return weights_path
-    else:
-        return None
+    def predict_image(self, image_path: str, save_result: bool = True) -> Tuple[np.ndarray, List[dict]]:
+        """
+        Detect traffic signs in an image
+        
+        Args:
+            image_path: Path to the input image
+            save_result: Whether to save the visualization
+            
+        Returns:
+            Tuple of (annotated image, detections)
+        """
+        # Read image
+        image = cv2.imread(image_path)
+        if image is None:
+            raise ValueError(f"Could not read image: {image_path}")
+            
+        # Enhance image for better inference
+        enhanced_image = self.enhance_image_for_inference(image)
+        
+        # Run inference
+        results = self.model.predict(
+            enhanced_image,
+            conf=self.config.CONFIDENCE_THRESHOLD,
+            iou=self.config.NMS_THRESHOLD,
+            max_det=self.config.MAX_DETECTIONS,
+            verbose=self.config.VERBOSE
+        )
+        
+        # Process results
+        detections = []
+        for result in results:
+            boxes = result.boxes
+            for box in boxes:
+                detection = {
+                    'bbox': box.xyxy[0].tolist(),  # Convert to absolute coordinates
+                    'confidence': float(box.conf),
+                    'class_id': int(box.cls)
+                }
+                detections.append(detection)
+        
+        # Draw detections
+        annotated_image = VisualizationUtils.draw_detections(
+            image,
+            detections,
+            class_names=self.model.names,
+            confidence_threshold=self.config.CONFIDENCE_THRESHOLD
+        )
+        
+        # Save result if requested
+        if save_result:
+            output_filename = os.path.basename(image_path)
+            output_path = os.path.join(self.config.PREDICTIONS_DIR, output_filename)
+            VisualizationUtils.save_detection_result(
+                annotated_image,
+                self.config.PREDICTIONS_DIR,
+                output_filename,
+                detections
+            )
+        
+        return annotated_image, detections
+    
+    def predict_directory(self, input_dir: str = Config.CUSTOM_IMAGES_DIR) -> None:
+        """
+        Process all images in a directory
+        
+        Args:
+            input_dir: Directory containing input images
+        """
+        # Create output directory if it doesn't exist
+        os.makedirs(self.config.PREDICTIONS_DIR, exist_ok=True)
+        
+        # Get all image files
+        image_files = FileUtils.get_image_files(input_dir)
+        
+        # Process each image
+        for image_path in image_files:
+            try:
+                print(f"Processing {image_path}...")
+                self.predict_image(image_path)
+            except Exception as e:
+                print(f"Error processing {image_path}: {str(e)}")
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Chạy nhận diện YOLOv8 trên ảnh tùy chỉnh.")
-    parser.add_argument('--weights', type=str, default=None, help='Đường dẫn đến file trọng số (ví dụ: runs/detect/train/weights/best.pt). Nếu bỏ trống, sẽ tự động tìm file mới nhất.')
-    parser.add_argument('--source', type=str, default='custom_images', help='Đường dẫn đến thư mục chứa ảnh của bạn.')
-    args = parser.parse_args()
+def main():
+    """Main function to run inference"""
+    # Create necessary directories
+    Config.create_directories()
+    
+    # Initialize detector
+    detector = TrafficSignDetector()
+    
+    # Process all images in custom_images directory
+    detector.predict_directory()
 
-    weights = args.weights
-    if weights is None:
-        print("🤔 Không có đường dẫn trọng số. Đang tìm mô hình được huấn luyện gần nhất...")
-        weights = find_latest_weights()
-
-    if not weights:
-        print("❌ Lỗi: Không tìm thấy trọng số đã huấn luyện. Vui lòng chạy train.py trước hoặc cung cấp đường dẫn bằng tham số --weights.")
-    else:
-        predict(weights, args.source) 
+if __name__ == "__main__":
+    main() 
