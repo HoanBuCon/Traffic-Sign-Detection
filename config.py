@@ -46,11 +46,7 @@ class Config:
     
     # Output
     OUTPUT_DIR = "output"
-<<<<<<< HEAD
-    CUSTOM_IMAGES_DIR = "custom_images"
-=======
     INPUT_DIR = 'input'
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
     PREDICTIONS_DIR = os.path.join(OUTPUT_DIR, "predictions")
     
     # Model save
@@ -61,11 +57,7 @@ class Config:
     def create_directories(cls):
         """Create necessary directories"""
         os.makedirs(cls.OUTPUT_DIR, exist_ok=True)
-<<<<<<< HEAD
-        os.makedirs(cls.CUSTOM_IMAGES_DIR, exist_ok=True)
-=======
         os.makedirs(cls.INPUT_DIR, exist_ok=True)
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
         os.makedirs(cls.PREDICTIONS_DIR, exist_ok=True)
         
     @classmethod

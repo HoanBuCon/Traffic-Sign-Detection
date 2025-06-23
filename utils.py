@@ -375,7 +375,7 @@ class FileUtils:
             output_path: Output yaml file path
         """
         yaml_content = f"""# Dataset configuration
-path: {os.path.abspath(dataset_path)}
+path: ./dataset
 train: images/train
 val: images/val
 
@@ -384,7 +384,7 @@ nc: 43  # Adjust based on your traffic sign classes
 
 # Class names (example - adjust based on your dataset)
 names:
-  Đường người đi bộ cắt ngang
+Đường người đi bộ cắt ngang
 Đường giao nhau (ngã ba bên phải)
 Cấm đi ngược chiều
 Phải đi vòng sang bên phải
@@ -448,3 +448,6 @@ def to_ascii_label(s):
     s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
     s = s.replace(' ', '_')
     return s 
+
+IMAGE_DIR = os.path.abspath("./dataset/images")
+LABEL_DIR = os.path.abspath("./dataset/labels") 
