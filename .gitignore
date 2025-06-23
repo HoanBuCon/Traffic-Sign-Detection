@@ -13,7 +13,7 @@ logs/
 
 # Dữ liệu huấn luyện và dự đoán
 custom_images/
-dataset/
+datasetv2/
 
 # File tạm, cache, hệ điều hành
 __pycache__/

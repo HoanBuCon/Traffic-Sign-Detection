@@ -3,7 +3,7 @@ from pathlib import Path
 
 class Config:
     # Paths
-    DATASET_PATH = "dataset"
+    DATASET_PATH = "datasetv2"
     TRAIN_IMAGES = os.path.join(DATASET_PATH, "images", "train")
     TRAIN_LABELS = os.path.join(DATASET_PATH, "labels", "train")
     VAL_IMAGES = os.path.join(DATASET_PATH, "images", "val")
@@ -11,7 +11,7 @@ class Config:
     
     # Model
     MODEL_SIZE = "yolov8m.pt"  # Using YOLOv8m as specified
-    EPOCHS = 5
+    EPOCHS = 100
     BATCH_SIZE = 16
     IMAGE_SIZE = 640
     

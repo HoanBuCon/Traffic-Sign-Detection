@@ -1,4 +1,5 @@
 import os
+import datetime
 from ultralytics import YOLO
 from config import Config
 from utils import DataAugmentation
@@ -75,17 +76,20 @@ class TrafficSignTrainer:
                 close_mosaic=10,  # Close mosaic augmentation for last 10 epochs
             )
             
-            # Save the trained model
+            # Save the trained model with timestamp
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            best_model_name = f"best_traffic_sign_model_{timestamp}.pt"
+            last_model_name = f"last_traffic_sign_model_{timestamp}.pt"
             best_model_path = os.path.join('runs', 'traffic_sign_detection', 'weights', 'best.pt')
             last_model_path = os.path.join('runs', 'traffic_sign_detection', 'weights', 'last.pt')
             
             if os.path.exists(best_model_path):
-                os.replace(best_model_path, self.config.BEST_MODEL_PATH)
-                print(f"\nBest model saved to: {self.config.BEST_MODEL_PATH}")
+                os.replace(best_model_path, best_model_name)
+                print(f"\nBest model saved to: {best_model_name}")
             
             if os.path.exists(last_model_path):
-                os.replace(last_model_path, self.config.LAST_MODEL_PATH)
-                print(f"Last model saved to: {self.config.LAST_MODEL_PATH}")
+                os.replace(last_model_path, last_model_name)
+                print(f"Last model saved to: {last_model_name}")
             
             # Print training results
             print("\nTraining Results:")
