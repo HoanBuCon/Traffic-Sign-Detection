@@ -9,6 +9,10 @@ from config import Config
 from utils import ImageEnhancer, VisualizationUtils, FileUtils
 import glob
 import yaml
+<<<<<<< HEAD
+=======
+import unicodedata
+>>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
 
 # Hàm tạo thư mục predict mới
 def get_new_predict_dir(base_dir="output"):
@@ -20,6 +24,90 @@ def get_new_predict_dir(base_dir="output"):
             return predict_dir
         i += 1
 
+<<<<<<< HEAD
+=======
+# Thêm ánh xạ mã nhãn sang mô tả tiếng Việt
+descriptions_vi = [
+    "Đường người đi bộ cắt ngang",
+    "Đường giao nhau (ngã ba bên phải)",
+    "Cấm đi ngược chiều",
+    "Phải đi vòng sang bên phải",
+    "Giao nhau với đường đồng cấp",
+    "Giao nhau với đường không ưu tiên",
+    "Chỗ ngoặt nguy hiểm vòng bên trái",
+    "Cấm rẽ trái",
+    "Bến xe buýt",
+    "Nơi giao nhau chạy theo vòng xuyến",
+    "Cấm dừng và đỗ xe",
+    "Chỗ quay xe",
+    "Biển gộp làn đường theo phương tiện",
+    "Đi chậm",
+    "Cấm xe tải",
+    "Đường bị thu hẹp về phía phải",
+    "Giới hạn chiều cao",
+    "Cấm quay đầu",
+    "Cấm ô tô khách và ô tô tải",
+    "Cấm rẽ phải và quay đầu",
+    "Cấm ô tô",
+    "Đường bị thu hẹp về phía trái",
+    "Gồ giảm tốc phía trước",
+    "Cấm xe hai và ba bánh",
+    "Kiểm tra",
+    "Chỉ dành cho xe máy*",
+    "Chướng ngoại vật phía trước",
+    "Trẻ em",
+    "Xe tải và xe công*",
+    "Cấm mô tô và xe máy",
+    "Chỉ dành cho xe tải*",
+    "Đường có camera giám sát",
+    "Cấm rẽ phải",
+    "Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang phải",
+    "Cấm xe sơ-mi rơ-moóc",
+    "Cấm rẽ trái và phải",
+    "Cấm đi thẳng và rẽ phải",
+    "Đường giao nhau (ngã ba bên trái)",
+    "Giới hạn tốc độ (50km/h)",
+    "Giới hạn tốc độ (60km/h)",
+    "Giới hạn tốc độ (80km/h)",
+    "Giới hạn tốc độ (40km/h)",
+    "Các xe chỉ được rẽ trái",
+    "Chiều cao tĩnh không thực tế",
+    "Nguy hiểm khác",
+    "Đường một chiều",
+    "Cấm đỗ xe",
+    "Cấm ô tô quay đầu xe (được rẽ trái)",
+    "Giao nhau với đường sắt có rào chắn",
+    "Cấm rẽ trái và quay đầu xe",
+    "Chỗ ngoặt nguy hiểm vòng bên phải",
+    "Chú ý chướng ngại vật – vòng tránh sang bên phải"
+]
+
+def remove_vietnamese_diacritics(text):
+    text = unicodedata.normalize('NFD', text)
+    text = ''.join([c for c in text if unicodedata.category(c) != 'Mn'])
+    text = text.replace('đ', 'd').replace('Đ', 'D')
+    text = text.replace('–', '-')
+    text = text.replace(' ', '_')
+    text = text.replace('*', '')
+    text = text.replace('(', '').replace(')', '')
+    text = text.replace('/', '_')
+    text = text.replace(',', '')
+    text = text.replace('.', '')
+    text = text.replace('-', '_')
+    text = text.replace('__', '_')
+    return text
+
+descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
+
+# Tạo dict ánh xạ mã nhãn -> mô tả tiếng Việt
+def get_class_names_vi(class_names):
+    if isinstance(class_names, dict):
+        return {class_names[str(i)]: descriptions_vi[i] for i in range(len(descriptions_vi)) if str(i) in class_names}
+    elif isinstance(class_names, list):
+        return {class_names[i]: descriptions_vi[i] for i in range(min(len(class_names), len(descriptions_vi)))}
+    return {}
+
+>>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
 class TrafficSignDetector:
     def __init__(self, model_path: str = None, predictions_dir: str = None):
         """
@@ -124,6 +212,7 @@ class TrafficSignDetector:
             boxes = result.boxes
             for box in boxes:
                 class_idx = int(box.cls)
+<<<<<<< HEAD
                 # Lấy key mã nhãn từ dict theo chỉ số
                 if isinstance(self.class_names, dict):
                     keys = list(self.class_names.keys())
@@ -137,6 +226,16 @@ class TrafficSignDetector:
                     'bbox': box.xyxy[0].tolist(),
                     'confidence': float(box.conf),
                     'class_id': class_id
+=======
+                class_label = self.class_names[class_idx] if isinstance(self.class_names, list) and class_idx < len(self.class_names) else str(class_idx)
+                class_label_vi = descriptions_vi_no_diacritics[class_idx] if class_idx < len(descriptions_vi_no_diacritics) else class_label
+                detection = {
+                    'bbox': box.xyxy[0].tolist(),
+                    'confidence': float(box.conf),
+                    'class_id': class_idx,
+                    'class_label': class_label,
+                    'class_label_vi': class_label_vi
+>>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
                 }
                 detections.append(detection)
         
@@ -151,18 +250,29 @@ class TrafficSignDetector:
         # Save result if requested
         if save_result:
             output_filename = os.path.basename(image_path)
+<<<<<<< HEAD
             output_path = os.path.join(self.predictions_dir, output_filename)
+=======
+>>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
             VisualizationUtils.save_detection_result(
                 annotated_image,
                 self.predictions_dir,
                 output_filename,
+<<<<<<< HEAD
                 detections,
                 class_names=self.class_names
+=======
+                detections
+>>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
             )
         
         return annotated_image, detections
     
+<<<<<<< HEAD
     def predict_directory(self, input_dir: str = Config.CUSTOM_IMAGES_DIR) -> None:
+=======
+    def predict_directory(self, input_dir: str = Config.INPUT_DIR) -> None:
+>>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
         """
         Process all images in a directory
         
