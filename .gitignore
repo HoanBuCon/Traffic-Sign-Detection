@@ -1,0 +1,50 @@
+# Loại trừ các file/directory nặng và không cần thiết
+# Model weights
+*.pt
+*.pth
+*.onnx
+*.ckpt
+*.weights
+
+# Output, logs, and results
+output/
+runs/
+logs/
+
+# Dữ liệu huấn luyện và dự đoán
+custom_images/
+datasetv2/
+
+# File tạm, cache, hệ điều hành
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# VSCode settings
+.vscode/
+
+# Python virtual environment
+venv/
+.env/
+ENV/
+
+# Ultralytics cache/settings
+*.cache
+*.log
+*.json
+
+# Khác
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z 

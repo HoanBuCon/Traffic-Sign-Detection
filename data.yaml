@@ -1,57 +1,63 @@
-train: dataset/images/train
-val: dataset/images/val
+# Dataset configuration
+path: C:\Users\andan\OneDrive\Desktop\Traffic-Sign-Detection\datasetv2
+train: images/train
+val: images/val
 
-nc: 52
+# Number of classes
+nc: 52  # Số lượng lớp biển báo giao thông
+
+# Tên các lớp (dạng list, mỗi dòng là một mã nhãn)
 names:
-- Duong_nguoi_di_bo_cat_ngang
-- Duong_giao_nhau_(nga_ba_ben_phai)
-- Cam_di_nguoc_chieu
-- Phai_di_vong_sang_ben_phai
-- Giao_nhau_voi_duong_dong_cap
-- Giao_nhau_voi_duong_khong_uu_tien
-- Cho_ngoat_nguy_hiem_vong_ben_trai
-- Cam_re_trai
-- Ben_xe_buyt
-- Noi_giao_nhau_chay_theo_vong_xuyen
-- Cam_dung_va_do_xe
-- Cho_quay_xe
-- Bien_gop_lan_duong_theo_phuong_tien
-- Di_cham
-- Cam_xe_tai
-- Duong_bi_thu_hep_ve_phia_phai
-- Gioi_han_chieu_cao
-- Cam_quay_dau
-- Cam_o_to_khach_va_o_to_tai
-- Cam_re_phai_va_quay_dau
-- Cam_o_to
-- Duong_bi_thu_hep_ve_phia_trai
-- Go_giam_toc_phia_truoc
-- Cam_xe_hai_va_ba_banh
-- Kiem_tra
-- Chi_danh_cho_xe_may*
-- Chuong_ngoai_vat_phia_truoc
-- Tre_em
-- Xe_tai_va_xe_cong*
-- Cam_mo_to_va_xe_may
-- Chi_danh_cho_xe_tai*
-- Duong_co_camera_giam_sat
-- Cam_re_phai
-- Nhieu_cho_ngoat_nguy_hiem_lien_tiep,_cho_dau_tien_sang_phai
-- Cam_xe_so-mi_ro-mooc
-- Cam_re_trai_va_phai
-- Cam_di_thang_va_re_phai
-- Duong_giao_nhau_(nga_ba_ben_trai)
-- Gioi_han_toc_do_(50km/h)
-- Gioi_han_toc_do_(60km/h)
-- Gioi_han_toc_do_(80km/h)
-- Gioi_han_toc_do_(40km/h)
-- Cac_xe_chi_duoc_re_trai
-- Chieu_cao_tinh_khong_thuc_te
-- Nguy_hiem_khac
-- Duong_mot_chieu
-- Cam_do_xe
-- Cam_o_to_quay_dau_xe_(duoc_re_trai)
-- Giao_nhau_voi_duong_sat_co_rao_chan
-- Cam_re_trai_va_quay_dau_xe
-- Cho_ngoat_nguy_hiem_vong_ben_phai
-- Chu_y_chuong_ngai_vat_vong_tranh_sang_ben_phai
+  - W.224
+  - W.205c
+  - P.102
+  - R.302a
+  - W.205a
+  - W.207
+  - W.201a
+  - P.123a
+  - I.434a
+  - R.303
+  - P.130
+  - I.409
+  - R.415a
+  - W.245a
+  - P.106a*Xe_Tai
+  - W.203c
+  - P.117*
+  - P.124a*
+  - P.107
+  - P.124d
+  - P.103a
+  - W.203b
+  - W.221b
+  - P.111
+  - P.129
+  - S.505a*Xe_May
+  - W.246a
+  - W.225
+  - S.505a*Xe_Tai_Va_Cong
+  - P.104
+  - S.505a*Xe_Tai
+  - Camera
+  - P.123b
+  - W.202b
+  - B.8a
+  - P.137
+  - P.139
+  - W.205b
+  - P.127*50
+  - P.127*60
+  - P.127*80
+  - P.127*40
+  - R.301e
+  - W.239b*
+  - W.233
+  - I.407a
+  - P.131a
+  - P.124b1
+  - W.210
+  - P.124c
+  - W.201b
+  - W.246c
+
