@@ -12,7 +12,7 @@ runs/
 logs/
 
 # Dữ liệu huấn luyện và dự đoán
-custom_images/
+# custom_images/ (không còn dùng)
 datasetv2/
 
 # File tạm, cache, hệ điều hành
@@ -47,4 +47,7 @@ ENV/
 *.tar
 *.tar.gz
 *.rar
-*.7z 
+*.7z
+
+input/
+all_weight/ 
