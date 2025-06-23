@@ -172,7 +172,7 @@ class TrafficSignDetector:
         
         return image
     
-    def predict_image(self, image_path: str, save_result: bool = True) -> Tuple[np.ndarray, List[dict]]:
+    def predict_image(self, image_path: str, save_result: bool = True, image_id: int = None) -> Tuple[np.ndarray, List[dict]]:
         """
         Detect traffic signs in an image
         
@@ -228,6 +228,8 @@ class TrafficSignDetector:
         # Save result if requested
         if save_result:
             output_filename = os.path.basename(image_path)
+            if image_id is not None:
+                output_filename = f"{image_id}-{output_filename}"
             VisualizationUtils.save_detection_result(
                 annotated_image,
                 self.predictions_dir,
@@ -251,10 +253,10 @@ class TrafficSignDetector:
         image_files = FileUtils.get_image_files(input_dir)
         
         # Process each image
-        for image_path in image_files:
+        for idx, image_path in enumerate(image_files, 1):
             try:
                 print(f"Processing {image_path}...")
-                self.predict_image(image_path)
+                self.predict_image(image_path, save_result=True, image_id=idx)
             except Exception as e:
                 print(f"Error processing {image_path}: {str(e)}")
 
