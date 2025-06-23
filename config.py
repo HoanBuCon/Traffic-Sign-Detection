@@ -11,9 +11,9 @@ class Config:
     
     # Model
     MODEL_SIZE = "yolov8m.pt"  # Using YOLOv8m as specified
-    EPOCHS = 1
-    BATCH_SIZE = 8
-    IMAGE_SIZE = 640
+    EPOCHS = 2
+    BATCH_SIZE = 4 # Low-end PC = 4, High-end PC = 8
+    IMAGE_SIZE = 320 # Low-end PC = 320, High-end PC = 640
     
     # Training
     LEARNING_RATE = 0.01
@@ -53,6 +53,9 @@ class Config:
     BEST_MODEL_PATH = "best_traffic_sign_model.pt"
     LAST_MODEL_PATH = "last_traffic_sign_model.pt"
     
+    # Workers (Low-end PC = 0, High-end PC = 4 or 8)
+    WORKERS = 2
+    
     @classmethod
     def create_directories(cls):
         """Create necessary directories"""
@@ -68,53 +71,4 @@ class Config:
 path: {os.path.abspath(cls.DATASET_PATH)}
 train: images/train
 val: images/val
-
-# Number of classes
-nc: 43  # Adjust based on your traffic sign classes
-
-# Class names (example - adjust based on your dataset)
-names:
-  0: speed_limit_20
-  1: speed_limit_30
-  2: speed_limit_50
-  3: speed_limit_60
-  4: speed_limit_70
-  5: speed_limit_80
-  6: end_of_speed_limit_80
-  7: speed_limit_100
-  8: speed_limit_120
-  9: no_passing
-  10: no_passing_for_vehicles_over_3_5_metric_tons
-  11: right_of_way_at_the_next_intersection
-  12: priority_road
-  13: yield
-  14: stop
-  15: no_vehicles
-  16: vehicles_over_3_5_metric_tons_prohibited
-  17: no_entry
-  18: general_caution
-  19: dangerous_curve_left
-  20: dangerous_curve_right
-  21: double_curve
-  22: bumpy_road
-  23: slippery_road
-  24: road_narrows_on_the_right
-  25: road_work
-  26: traffic_signals
-  27: pedestrians
-  28: children_crossing
-  29: bicycles_crossing
-  30: snow
-  31: wild_animals_crossing
-  32: end_of_all_speed_and_passing_limits
-  33: turn_right_ahead
-  34: turn_left_ahead
-  35: ahead_only
-  36: go_straight_or_right
-  37: go_straight_or_left
-  38: keep_right
-  39: keep_left
-  40: roundabout_mandatory
-  41: end_of_no_passing
-  42: end_of_no_passing_by_vehicles_over_3_5_metric_tons
 """ 

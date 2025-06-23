@@ -89,6 +89,7 @@ class TrafficSignTrainer:
                 cls=0.5,  # Classification loss gain
                 dfl=1.5,  # DFL loss gain
                 close_mosaic=10,  # Close mosaic augmentation for last 10 epochs
+                workers=self.config.WORKERS,
             )
             
             # Lưu best.pt và last.pt vào thư mục all_weight/trainX
