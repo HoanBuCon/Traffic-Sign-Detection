@@ -9,10 +9,7 @@ from config import Config
 from utils import ImageEnhancer, VisualizationUtils, FileUtils
 import glob
 import yaml
-<<<<<<< HEAD
-=======
 import unicodedata
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
 
 # Hàm tạo thư mục predict mới
 def get_new_predict_dir(base_dir="output"):
@@ -24,8 +21,6 @@ def get_new_predict_dir(base_dir="output"):
             return predict_dir
         i += 1
 
-<<<<<<< HEAD
-=======
 # Thêm ánh xạ mã nhãn sang mô tả tiếng Việt
 descriptions_vi = [
     "Đường người đi bộ cắt ngang",
@@ -107,7 +102,6 @@ def get_class_names_vi(class_names):
         return {class_names[i]: descriptions_vi[i] for i in range(min(len(class_names), len(descriptions_vi)))}
     return {}
 
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
 class TrafficSignDetector:
     def __init__(self, model_path: str = None, predictions_dir: str = None):
         """
@@ -212,21 +206,6 @@ class TrafficSignDetector:
             boxes = result.boxes
             for box in boxes:
                 class_idx = int(box.cls)
-<<<<<<< HEAD
-                # Lấy key mã nhãn từ dict theo chỉ số
-                if isinstance(self.class_names, dict):
-                    keys = list(self.class_names.keys())
-                    if class_idx < len(keys):
-                        class_id = keys[class_idx]
-                    else:
-                        class_id = str(class_idx)
-                else:
-                    class_id = str(class_idx)
-                detection = {
-                    'bbox': box.xyxy[0].tolist(),
-                    'confidence': float(box.conf),
-                    'class_id': class_id
-=======
                 class_label = self.class_names[class_idx] if isinstance(self.class_names, list) and class_idx < len(self.class_names) else str(class_idx)
                 class_label_vi = descriptions_vi_no_diacritics[class_idx] if class_idx < len(descriptions_vi_no_diacritics) else class_label
                 detection = {
@@ -235,7 +214,6 @@ class TrafficSignDetector:
                     'class_id': class_idx,
                     'class_label': class_label,
                     'class_label_vi': class_label_vi
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
                 }
                 detections.append(detection)
         
@@ -250,29 +228,16 @@ class TrafficSignDetector:
         # Save result if requested
         if save_result:
             output_filename = os.path.basename(image_path)
-<<<<<<< HEAD
-            output_path = os.path.join(self.predictions_dir, output_filename)
-=======
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
             VisualizationUtils.save_detection_result(
                 annotated_image,
                 self.predictions_dir,
                 output_filename,
-<<<<<<< HEAD
-                detections,
-                class_names=self.class_names
-=======
                 detections
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
             )
         
         return annotated_image, detections
     
-<<<<<<< HEAD
-    def predict_directory(self, input_dir: str = Config.CUSTOM_IMAGES_DIR) -> None:
-=======
     def predict_directory(self, input_dir: str = Config.INPUT_DIR) -> None:
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
         """
         Process all images in a directory
         
