@@ -2,9 +2,9 @@ import os
 import random
 import shutil
 
-# Đường dẫn gốc (bên ngoài thư mục hiện tại)
-IMAGE_DIR = os.path.abspath("./../dataset/images")
-LABEL_DIR = os.path.abspath("./../dataset/labels")
+# Đường dẫn gốc (trong thư mục hiện tại)
+IMAGE_DIR = os.path.abspath("./dataset/images")
+LABEL_DIR = os.path.abspath("./dataset/labels")
 
 # Tạo thư mục mới để chứa train/val trong cùng thư mục dataset
 OUTPUT_IMAGE_DIR = os.path.join(os.path.dirname(IMAGE_DIR), "images")
