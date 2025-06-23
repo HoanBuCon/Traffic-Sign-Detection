@@ -7,11 +7,8 @@ import os
 from pathlib import Path
 from skimage import exposure
 from scipy.ndimage import gaussian_filter
-<<<<<<< HEAD
-=======
 import json
 import unicodedata
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
 
 class ImageEnhancer:
     """Class for enhancing image quality for better detection"""
@@ -301,43 +298,14 @@ class VisualizationUtils:
     
     @staticmethod
     def save_detection_result(image: np.ndarray, output_path: str, 
-<<<<<<< HEAD
-                            filename: str, detections: List[dict] = None, class_names=None):
-        """
-        Save detection result with metadata
-=======
                             filename: str, detections: List[dict] = None, class_names=None, class_names_vi=None):
         """
         Save detection result with metadata (JSON)
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
         Args:
             image: Image with drawn detections
             output_path: Directory to save results
             filename: Output filename
             detections: List of detection dictionaries
-<<<<<<< HEAD
-            class_names: Dict ánh xạ số -> mã nhãn
-        """
-        os.makedirs(output_path, exist_ok=True)
-        image_path = os.path.join(output_path, filename)
-        cv2.imwrite(image_path, image)
-        if detections:
-            base_name = os.path.splitext(filename)[0]
-            metadata_path = os.path.join(output_path, f"{base_name}_detections.txt")
-            with open(metadata_path, 'w') as f:
-                for i, det in enumerate(detections, 1):
-                    class_id = det['class_id']
-                    # Ánh xạ số sang mã nhãn nếu có class_names
-                    if class_names and str(class_id) in class_names:
-                        class_label = class_names[str(class_id)]
-                    else:
-                        class_label = str(class_id)
-                    f.write(f"Detection {i}:\n")
-                    f.write(f"  Class: {class_label}\n")
-                    f.write(f"  Confidence: {det['confidence']:.4f}\n")
-                    f.write(f"  Bounding Box: {det['bbox']}\n")
-                    f.write("\n")
-=======
             class_names: List hoặc Dict ánh xạ số -> mã nhãn
             class_names_vi: Dict ánh xạ mã nhãn -> mô tả tiếng Việt
         """
@@ -371,7 +339,6 @@ class VisualizationUtils:
                 })
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 json.dump(output_json, f, ensure_ascii=False, indent=2)
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
 
 class FileUtils:
     """Utilities for file operations"""
@@ -417,51 +384,6 @@ nc: 43  # Adjust based on your traffic sign classes
 
 # Class names (example - adjust based on your dataset)
 names:
-<<<<<<< HEAD
-  0: speed_limit_20
-  1: speed_limit_30
-  2: speed_limit_50
-  3: speed_limit_60
-  4: speed_limit_70
-  5: speed_limit_80
-  6: end_of_speed_limit_80
-  7: speed_limit_100
-  8: speed_limit_120
-  9: no_passing
-  10: no_passing_for_vehicles_over_3_5_metric_tons
-  11: right_of_way_at_the_next_intersection
-  12: priority_road
-  13: yield
-  14: stop
-  15: no_vehicles
-  16: vehicles_over_3_5_metric_tons_prohibited
-  17: no_entry
-  18: general_caution
-  19: dangerous_curve_left
-  20: dangerous_curve_right
-  21: double_curve
-  22: bumpy_road
-  23: slippery_road
-  24: road_narrows_on_the_right
-  25: road_work
-  26: traffic_signals
-  27: pedestrians
-  28: children_crossing
-  29: bicycles_crossing
-  30: snow
-  31: wild_animals_crossing
-  32: end_of_all_speed_and_passing_limits
-  33: turn_right_ahead
-  34: turn_left_ahead
-  35: ahead_only
-  36: go_straight_or_right
-  37: go_straight_or_left
-  38: keep_right
-  39: keep_left
-  40: roundabout_mandatory
-  41: end_of_no_passing
-  42: end_of_no_passing_by_vehicles_over_3_5_metric_tons
-=======
   Đường người đi bộ cắt ngang
 Đường giao nhau (ngã ba bên phải)
 Cấm đi ngược chiều
@@ -514,15 +436,11 @@ Giao nhau với đường sắt có rào chắn
 Cấm rẽ trái và quay đầu xe
 Chỗ ngoặt nguy hiểm vòng bên phải
 Chú ý chướng ngại vật – vòng tránh sang bên phải
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
 """
         
         with open(output_path, 'w') as f:
             f.write(yaml_content)
         
-<<<<<<< HEAD
-        print(f"Created dataset.yaml at: {output_path}") 
-=======
         print(f"Created dataset.yaml at: {output_path}")
 
 def to_ascii_label(s):
@@ -530,4 +448,3 @@ def to_ascii_label(s):
     s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
     s = s.replace(' ', '_')
     return s 
->>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
