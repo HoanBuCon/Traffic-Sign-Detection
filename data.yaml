@@ -1,57 +1,54 @@
-train: dataset/images/train
-val: dataset/images/val
 
-nc: 52
+# Dataset configuration
+path: C:\Users\andan\OneDrive\Desktop\Traffic-Sign-Detection\dataset
+train: images/train
+val: images/val
+
+# Number of classes
+nc: 43  # Adjust based on your traffic sign classes
+
+# Class names (example - adjust based on your dataset)
 names:
-- Duong_nguoi_di_bo_cat_ngang
-- Duong_giao_nhau_(nga_ba_ben_phai)
-- Cam_di_nguoc_chieu
-- Phai_di_vong_sang_ben_phai
-- Giao_nhau_voi_duong_dong_cap
-- Giao_nhau_voi_duong_khong_uu_tien
-- Cho_ngoat_nguy_hiem_vong_ben_trai
-- Cam_re_trai
-- Ben_xe_buyt
-- Noi_giao_nhau_chay_theo_vong_xuyen
-- Cam_dung_va_do_xe
-- Cho_quay_xe
-- Bien_gop_lan_duong_theo_phuong_tien
-- Di_cham
-- Cam_xe_tai
-- Duong_bi_thu_hep_ve_phia_phai
-- Gioi_han_chieu_cao
-- Cam_quay_dau
-- Cam_o_to_khach_va_o_to_tai
-- Cam_re_phai_va_quay_dau
-- Cam_o_to
-- Duong_bi_thu_hep_ve_phia_trai
-- Go_giam_toc_phia_truoc
-- Cam_xe_hai_va_ba_banh
-- Kiem_tra
-- Chi_danh_cho_xe_may*
-- Chuong_ngoai_vat_phia_truoc
-- Tre_em
-- Xe_tai_va_xe_cong*
-- Cam_mo_to_va_xe_may
-- Chi_danh_cho_xe_tai*
-- Duong_co_camera_giam_sat
-- Cam_re_phai
-- Nhieu_cho_ngoat_nguy_hiem_lien_tiep,_cho_dau_tien_sang_phai
-- Cam_xe_so-mi_ro-mooc
-- Cam_re_trai_va_phai
-- Cam_di_thang_va_re_phai
-- Duong_giao_nhau_(nga_ba_ben_trai)
-- Gioi_han_toc_do_(50km/h)
-- Gioi_han_toc_do_(60km/h)
-- Gioi_han_toc_do_(80km/h)
-- Gioi_han_toc_do_(40km/h)
-- Cac_xe_chi_duoc_re_trai
-- Chieu_cao_tinh_khong_thuc_te
-- Nguy_hiem_khac
-- Duong_mot_chieu
-- Cam_do_xe
-- Cam_o_to_quay_dau_xe_(duoc_re_trai)
-- Giao_nhau_voi_duong_sat_co_rao_chan
-- Cam_re_trai_va_quay_dau_xe
-- Cho_ngoat_nguy_hiem_vong_ben_phai
-- Chu_y_chuong_ngai_vat_vong_tranh_sang_ben_phai
+  0: speed_limit_20
+  1: speed_limit_30
+  2: speed_limit_50
+  3: speed_limit_60
+  4: speed_limit_70
+  5: speed_limit_80
+  6: end_of_speed_limit_80
+  7: speed_limit_100
+  8: speed_limit_120
+  9: no_passing
+  10: no_passing_for_vehicles_over_3_5_metric_tons
+  11: right_of_way_at_the_next_intersection
+  12: priority_road
+  13: yield
+  14: stop
+  15: no_vehicles
+  16: vehicles_over_3_5_metric_tons_prohibited
+  17: no_entry
+  18: general_caution
+  19: dangerous_curve_left
+  20: dangerous_curve_right
+  21: double_curve
+  22: bumpy_road
+  23: slippery_road
+  24: road_narrows_on_the_right
+  25: road_work
+  26: traffic_signals
+  27: pedestrians
+  28: children_crossing
+  29: bicycles_crossing
+  30: snow
+  31: wild_animals_crossing
+  32: end_of_all_speed_and_passing_limits
+  33: turn_right_ahead
+  34: turn_left_ahead
+  35: ahead_only
+  36: go_straight_or_right
+  37: go_straight_or_left
+  38: keep_right
+  39: keep_left
+  40: roundabout_mandatory
+  41: end_of_no_passing
+  42: end_of_no_passing_by_vehicles_over_3_5_metric_tons
