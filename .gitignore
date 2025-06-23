@@ -12,7 +12,11 @@ runs/
 logs/
 
 # Dữ liệu huấn luyện và dự đoán
+<<<<<<< HEAD
 custom_images/
+=======
+# custom_images/ (không còn dùng)
+>>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
 datasetv2/
 
 # File tạm, cache, hệ điều hành
@@ -47,4 +51,11 @@ ENV/
 *.tar
 *.tar.gz
 *.rar
+<<<<<<< HEAD
 *.7z 
+=======
+*.7z
+
+input/
+# all_weight/ 
+>>>>>>> d9a6e9e11355e0f42059eaa302533f0e4301fe25
