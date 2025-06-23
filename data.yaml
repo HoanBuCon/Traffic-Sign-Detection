@@ -1,5 +1,5 @@
 # Dataset configuration
-path: C:\Users\andan\OneDrive\Desktop\Traffic-Sign-Detection\datasetv2
+path: ./dataset
 train: images/train
 val: images/val
 
