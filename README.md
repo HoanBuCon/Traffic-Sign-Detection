@@ -64,18 +64,37 @@ pip install -r requirements.txt
 python train.py
 ```
 
-### 5. Detect traffic signs
-- Place the traffic signs images you want to detect into the folder: ```.\Traffic-Sign-Detection\input```
+### 5. Create necessary folders
+#### ❗Before running detection or training, make sure the following folders exist inside the `Traffic-Sign-Detection` directory:
+
+- 📁 `input` — Place your input images here 
+- 📁 `output` — Detected images will be saved here  
+- 📁 `all_weights` — Folder for storing trained model weights  
+#### ❗The final path should look like:
+- ```.\Traffic-Sign-Detection\input```
+- ```.\Traffic-Sign-Detection\output```
+- ```.\Traffic-Sign-Detection\all_weight```
+
+```text
+└── Traffic-Sign-Detection\
+    ├── input
+    ├── output
+    └── all_weights
+```
+#### ✅ Make sure these folders are created before running train.py or predict.py.
+
+### 6. Detect traffic signs
+- Place the traffic signs images you want to detect into the 📁`input` folder: ```.\Traffic-Sign-Detection\input```
 - Open ***Terminal*** and run the detection script:
 ```bash
 python predict.py
 ```
 
-### 6. Data
+### 7. Data
 - Detected images: ```.\Traffic-Sign-Detection\output```
 - Trained weights: ```.\Traffic-Sign-Detection\all_weight```
 
-### 7. Enjoy🎉
+### 8. Enjoy🎉
 - Thank you for checking out our project! Feel free to explore, improve, or contribute 🚀
 
 <hr>
