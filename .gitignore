@@ -11,6 +11,7 @@ input/
 output/
 runs/
 logs/
+real_time_output/
 
 # Dữ liệu huấn luyện và dự đoán
 dataset/
