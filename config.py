@@ -3,7 +3,7 @@ from pathlib import Path
 
 class Config:
     # Paths
-    DATASET_PATH = "datasetv2"
+    DATASET_PATH = "dataset"
     TRAIN_IMAGES = os.path.join(DATASET_PATH, "images", "train")
     TRAIN_LABELS = os.path.join(DATASET_PATH, "labels", "train")
     VAL_IMAGES = os.path.join(DATASET_PATH, "images", "val")
