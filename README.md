@@ -57,13 +57,7 @@ venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 ```
 
-### 4. Training
-- Open ***Terminal*** and run this script:
-```bash
-python train.py
-```
-
-### 5. Create necessary folders
+### 4. Create necessary folders
 #### ❗Before running detection or training, make sure the following folders exist inside the `Traffic-Sign-Detection` directory:
 
 - 📁 `input` — Place your input images here 
@@ -80,7 +74,13 @@ python train.py
     ├── output
     └── all_weight
 ```
-#### ✅ Make sure these folders are created before running train.py or predict.py.
+#### ✅ Make sure these folders are created before running ```train.py``` or ```predict.py```.
+
+### 5. Training
+- Open ***Terminal*** and run this script:
+```bash
+python train.py
+```
 
 ### 6. Detect traffic signs
 - Place the traffic signs images you want to detect into the 📁`input` folder: ```.\Traffic-Sign-Detection\input```
