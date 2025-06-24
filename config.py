@@ -11,9 +11,9 @@ class Config:
     
     # Model
     MODEL_SIZE = "yolov8m.pt"  # Using YOLOv8m as specified
-    EPOCHS = 2
-    BATCH_SIZE = 4 # Low-end PC = 4, High-end PC = 8
-    IMAGE_SIZE = 320 # Low-end PC = 320, High-end PC = 640
+    EPOCHS = 200 # Increased epochs for better training (100-200 Epochs)
+    BATCH_SIZE = 16 # Low-end PC = 4, High-end PC = 8
+    IMAGE_SIZE = 640 # Low-end PC = 320, High-end PC = 640
     
     # Training
     LEARNING_RATE = 0.01
@@ -54,7 +54,7 @@ class Config:
     LAST_MODEL_PATH = "last_traffic_sign_model.pt"
     
     # Workers (Low-end PC = 0, High-end PC = 4 or 8)
-    WORKERS = 2
+    WORKERS = 4
     
     @classmethod
     def create_directories(cls):
