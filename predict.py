@@ -1,4 +1,5 @@
 import os
+import sys
 import cv2
 import torch
 from ultralytics import YOLO
@@ -10,6 +11,11 @@ from utils import ImageEnhancer, VisualizationUtils, FileUtils
 import glob
 import yaml
 import unicodedata
+
+# Thêm thư mục gốc của project vào sys.path
+project_root = os.path.abspath(os.path.dirname(__file__))
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
 # Hàm tạo thư mục predict mới
 def get_new_predict_dir(base_dir="output"):
@@ -135,7 +141,8 @@ class TrafficSignDetector:
         print(f"[INFO] Saving predictions to: {self.predictions_dir}")
         
         # Đọc class_names từ data.yaml
-        with open('data.yaml', 'r', encoding='utf-8') as f:
+        data_yaml_path = 'data.yaml' # File data.yaml nằm ở thư mục gốc
+        with open(data_yaml_path, 'r', encoding='utf-8') as f:
             data_yaml = yaml.safe_load(f)
             self.class_names = data_yaml.get('names', {})
         

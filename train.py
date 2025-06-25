@@ -1,4 +1,5 @@
 import os
+import sys
 import datetime
 from ultralytics import YOLO
 from config import Config
@@ -6,6 +7,11 @@ from utils import DataAugmentation
 import torch
 from pathlib import Path
 import glob
+
+# Thêm thư mục gốc của project vào sys.path
+project_root = os.path.abspath(os.path.dirname(__file__))
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
 class TrafficSignTrainer:
     def __init__(self):
@@ -29,13 +35,14 @@ class TrafficSignTrainer:
         self.config.create_directories()
         
         # Generate dataset.yaml only if it doesn't exist
-        if not os.path.exists('data.yaml'):
+        self.data_yaml_path = 'data.yaml'
+        if not os.path.exists(self.data_yaml_path):
             dataset_content = self.config.get_dataset_yaml()
-            with open('data.yaml', 'w') as f:
+            with open(self.data_yaml_path, 'w', encoding='utf-8') as f:
                 f.write(dataset_content)
-            print("Created new data.yaml file")
+            print(f"Created new data.yaml file at: {self.data_yaml_path}")
         else:
-            print("Using existing data.yaml file")
+            print(f"Using existing data.yaml file at: {self.data_yaml_path}")
             
         # Print training configuration
         print("\nTraining Configuration:")
@@ -54,7 +61,7 @@ class TrafficSignTrainer:
             
             # Train the model
             results = model.train(
-                data='data.yaml',
+                data=self.data_yaml_path,
                 epochs=self.config.EPOCHS,
                 imgsz=self.config.IMAGE_SIZE,
                 batch=self.config.BATCH_SIZE,
@@ -138,7 +145,7 @@ class TrafficSignTrainer:
             
             # Validate
             results = model.val(
-                data='data.yaml',
+                data=self.data_yaml_path,
                 imgsz=self.config.IMAGE_SIZE,
                 batch=self.config.BATCH_SIZE,
                 device=0 if torch.cuda.is_available() else 'cpu',

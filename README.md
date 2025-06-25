@@ -1,10 +1,10 @@
 <h1 align="center">Vietnam Traffic Sign Detection</h1>
-<h3 align="center">Our first Machine Learning, Deep Learning and Computer Vision project.</h3>
+<h3 align="center">A Machine Learning, Deep Learning, and Computer Vision Project</h3>
 
 <hr>
 
 <!-- LƯU Ý: Nếu có &#x26; thì phải sửa thành & -->
-<h3>Collaborators:</h3>
+<h3>Contributors:</h3>
 <ul>
   <li><a href="https://github.com/davidislearninghowtocode" target="_blank">🧠 <b>David Vu</b></a></li>
   <li><a href="https://github.com/AnDpTri" target="_blank">💻 <b>The Peak</b></a></li>
@@ -13,13 +13,13 @@
 
 <hr>
 
-<h3>About project:</h3>  
+<h3>About the Project:</h3>  
 
-- <a href="https://www.kaggle.com/datasets/maitam/vietnamese-traffic-signs" target="_blank"><b>Dataset</b></a>
+- **Dataset:** <a href="https://www.kaggle.com/datasets/maitam/vietnamese-traffic-signs" target="_blank">Vietnamese Traffic Signs</a>
 
 - The model is based on YOLOv8-medium architecture
 
-- This project has strong potential for future development and improvement (maybe, lmao)
+- This project is designed with strong potential for future development and improvement.
 
 - This shit is so peak
 
@@ -83,10 +83,23 @@ python train.py
 ```
 
 ### 6. Detect traffic signs
+#### Option 1: Detect with images
 - Place the traffic signs images you want to detect into the 📁`input` folder: ```.\Traffic-Sign-Detection\input```
 - Open ***Terminal*** and run the detection script:
 ```bash
 python predict.py
+```
+#### Option 2: Detect with real time webcam/camera
+- Open ***Terminal*** and run the script for basic real-time detection:
+```bash
+python real_time_predict.py
+```
+
+#### Option 3: Detect with real time webcam with advanced smooth
+- Make sure you have placed `sort.py` in the `src` directory.
+- Open ***Terminal*** and run the script for advanced real-time detection with SORT:
+```bash
+python real_time_predict_smooth_advanced.py
 ```
 
 ### 7. Data
