@@ -40,8 +40,8 @@
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/HoanBuCon/Traffic-Sign-Detection
+cd Traffic-Sign-Detection
 ```
 
 ### 2. (Optional) Create a virtual environment
