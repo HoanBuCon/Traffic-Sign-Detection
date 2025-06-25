@@ -1,5 +1,5 @@
 <h1 align="center">Vietnam Traffic Sign Detection</h1>
-<h3 align="center">A Machine Learning, Deep Learning, and Computer Vision Project</h3>
+<h3 align="center">Our first Machine Learning, Deep Learning, and Computer Vision Project</h3>
 
 <hr>
 
