@@ -10,6 +10,7 @@
 output/
 runs/
 logs/
+real_time_output/
 
 # Dữ liệu huấn luyện và dự đoán
 # custom_images/ (không còn dùng)
