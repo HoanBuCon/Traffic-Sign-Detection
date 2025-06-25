@@ -1,4 +1,5 @@
 import os
+import sys
 import cv2
 import time
 from ultralytics import YOLO
@@ -7,6 +8,12 @@ import yaml
 from config import Config
 from utils import ImageEnhancer, VisualizationUtils
 import unicodedata
+from collections import deque, Counter
+
+# Thêm thư mục gốc của project vào sys.path để xử lý relative imports
+project_root = os.path.abspath(os.path.dirname(__file__))
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
 # Danh sách nhãn tiếng Việt (copy từ predict.py)
 descriptions_vi = [
@@ -100,9 +107,19 @@ class RealTimeTrafficSignDetector:
         self.image_enhancer = ImageEnhancer()
         self.config = Config
         # Đọc class_names từ data.yaml
-        with open('data.yaml', 'r', encoding='utf-8') as f:
+        data_yaml_path = 'data.yaml'
+        with open(data_yaml_path, 'r', encoding='utf-8') as f:
             data_yaml = yaml.safe_load(f)
             self.class_names = data_yaml.get('names', {})
+        self.label_buffers = {}  # Buffer cho từng object theo class_idx, key là class_idx, value là deque
+        self.buffer_size = 5     # Số frame để voting
+
+    def smooth_label(self, class_idx, obj_id):
+        if obj_id not in self.label_buffers:
+            self.label_buffers[obj_id] = deque(maxlen=self.buffer_size)
+        self.label_buffers[obj_id].append(class_idx)
+        most_common = Counter(self.label_buffers[obj_id]).most_common(1)
+        return most_common[0][0] if most_common else class_idx
 
     def enhance_image_for_inference(self, image: np.ndarray) -> np.ndarray:
         if not self.config.ENABLE_IMAGE_ENHANCEMENT:
@@ -127,12 +144,14 @@ class RealTimeTrafficSignDetector:
             boxes = result.boxes
             for box in boxes:
                 class_idx = int(box.cls)
-                class_label = self.class_names[class_idx] if isinstance(self.class_names, list) and class_idx < len(self.class_names) else str(class_idx)
-                class_label_vi = descriptions_vi_no_diacritics[class_idx] if class_idx < len(descriptions_vi_no_diacritics) else class_label
+                # Làm mượt nhãn theo class_idx (vì không tracking object)
+                class_idx_smooth = self.smooth_label(class_idx, class_idx)
+                class_label = self.class_names[class_idx_smooth] if isinstance(self.class_names, list) and class_idx_smooth < len(self.class_names) else str(class_idx_smooth)
+                class_label_vi = descriptions_vi_no_diacritics[class_idx_smooth] if class_idx_smooth < len(descriptions_vi_no_diacritics) else class_label
                 detection = {
                     'bbox': box.xyxy[0].tolist(),
                     'confidence': float(box.conf),
-                    'class_id': class_idx,
+                    'class_id': class_idx_smooth,
                     'class_label': class_label,
                     'class_label_vi': class_label_vi
                 }

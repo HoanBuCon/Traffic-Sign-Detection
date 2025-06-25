@@ -31,7 +31,7 @@ class Config:
     HUE = 0.1
     
     # Enhanced Inference Settings
-    CONFIDENCE_THRESHOLD = 0.25
+    CONFIDENCE_THRESHOLD = 0.6
     NMS_THRESHOLD = 0.45
     MAX_DETECTIONS = 100
     MULTI_LABEL = True  # Allow multiple labels per box
