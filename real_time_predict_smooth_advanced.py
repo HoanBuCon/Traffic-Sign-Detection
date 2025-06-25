@@ -109,6 +109,14 @@ descriptions_vi = [
 ]
 descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
 
+class_ids = [
+    "W.301", "W.302a", "P.101a", "P.123a", "W.207", "W.208", "W.212b", "P.124a", "S.507", "W.224", "P.131a",
+    "S.407", "R.411", "P.135", "P.106a", "W.233a", "P.117a", "P.125", "P.108", "P.124b", "P.102", "W.233b",
+    "W.235", "P.109", "S.501", "R.412", "R.412a", "W.211", "W.210", "P.106b", "P.111b", "R.413", "S.510",
+    "P.124c", "W.212a", "P.111a", "P.132", "P.134", "W.302b", "P.127", "P.128", "P.129", "P.126", "R.407",
+    "P.117b", "W.245", "R.407a", "P.130", "P.131b", "P.110", "W.222", "P.124d", "W.212c", "W.212d", "W.212e"
+]
+
 class RealTimeTrafficSignDetectorAdvanced:
     def __init__(self, model_path=None):
         if model_path is None:
@@ -208,6 +216,7 @@ class RealTimeTrafficSignDetectorAdvanced:
             class_idx_smooth = self.smooth_label(class_idx, object_id, confidence)
             class_label = self.class_names[class_idx_smooth] if isinstance(self.class_names, list) and class_idx_smooth < len(self.class_names) else str(class_idx_smooth)
             class_label_vi = descriptions_vi_no_diacritics[class_idx_smooth] if class_idx_smooth < len(descriptions_vi_no_diacritics) else class_label
+            class_id_code = class_ids[class_idx_smooth] if class_idx_smooth < len(class_ids) else str(class_idx_smooth)
 
             detection = {
                 'object_id': object_id,
@@ -215,7 +224,8 @@ class RealTimeTrafficSignDetectorAdvanced:
                 'confidence': confidence,
                 'class_id': class_idx_smooth,
                 'class_label': class_label,
-                'class_label_vi': class_label_vi
+                'class_label_vi': class_label_vi,
+                'class_id_code': class_id_code
             }
             detections.append(detection)
 
@@ -224,7 +234,7 @@ class RealTimeTrafficSignDetectorAdvanced:
     def draw_and_show(self, frame: np.ndarray, detections):
         for det in detections:
             x1, y1, x2, y2 = map(int, det['bbox'])
-            label = f"ID:{det['object_id']} | {det['class_label_vi']} | {det['confidence']:.2f}"
+            label = f"ID:{det['object_id']} | {det['class_id_code']} | {det['class_label_vi']} | {det['confidence']:.2f}"
             color = (0, 255, 0)
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
             cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
