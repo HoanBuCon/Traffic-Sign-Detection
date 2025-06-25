@@ -62,7 +62,7 @@ pip install -r requirements.txt
 
 - 📁 `input` — Place your input images here 
 - 📁 `output` — Detected images will be saved here
-- 📁 `real_time_output` - Detected videos will be saved here
+- 📁 `real_time_output` — Detected videos will be saved here
 - 📁 `all_weight` — Folder for storing trained model weights  
 #### ❗The final path should look like:
 - ```.\Traffic-Sign-Detection\input```
