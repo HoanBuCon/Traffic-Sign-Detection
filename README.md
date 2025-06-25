@@ -15,7 +15,7 @@
 
 <h3>About the Project:</h3>  
 
-- **Dataset:** <a href="https://www.kaggle.com/datasets/maitam/vietnamese-traffic-signs" target="_blank">Vietnamese Traffic Signs</a>
+- **Dataset:** <a href="https://www.kaggle.com/datasets/maitam/vietnamese-traffic-signs" target="_blank">Vietnam Traffic Signs</a>
 
 - The model is based on YOLOv8-medium architecture
 
@@ -61,17 +61,20 @@ pip install -r requirements.txt
 #### ❗Before running detection or training, make sure the following folders exist inside the `Traffic-Sign-Detection` directory:
 
 - 📁 `input` — Place your input images here 
-- 📁 `output` — Detected images will be saved here  
+- 📁 `output` — Detected images will be saved here
+- 📁 `real_time_output` - Detected videos will be saved here
 - 📁 `all_weight` — Folder for storing trained model weights  
 #### ❗The final path should look like:
 - ```.\Traffic-Sign-Detection\input```
 - ```.\Traffic-Sign-Detection\output```
+- ```.\Traffic-Sign-Detection\real_time_output```
 - ```.\Traffic-Sign-Detection\all_weight```
 
 ```text
 └── Traffic-Sign-Detection\
     ├── input
     ├── output
+    ├── real_time_output
     └── all_weight
 ```
 #### ✅ Make sure these folders are created before running ```train.py``` or ```predict.py```.
@@ -104,6 +107,7 @@ python real_time_predict_smooth_advanced.py
 
 ### 7. Data
 - Detected images: ```.\Traffic-Sign-Detection\output```
+- Detected videos: ```.\Traffic-Sign-Detection\real_time_output```
 - Trained weights: ```.\Traffic-Sign-Detection\all_weight```
 
 ### 8. Enjoy🎉
