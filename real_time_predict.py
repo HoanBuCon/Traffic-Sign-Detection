@@ -9,6 +9,8 @@ from config import Config
 from utils import ImageEnhancer, VisualizationUtils
 import unicodedata
 from collections import deque, Counter
+import torch
+from transformers import AutoModel, AutoProcessor
 
 # Thêm thư mục gốc của project vào sys.path để xử lý relative imports
 project_root = os.path.abspath(os.path.dirname(__file__))
@@ -114,6 +116,43 @@ class RealTimeTrafficSignDetector:
         self.label_buffers = {}  # Buffer cho từng object theo class_idx, key là class_idx, value là deque
         self.buffer_size = 5     # Số frame để voting
 
+        self._load_nlp_model()
+        # Các lớp biển báo mà chúng ta muốn chạy OCR để đọc chữ
+        self.TARGET_CLASSES_FOR_NLP = [
+            "Bien_gop_lan_duong_theo_phuong_tien",
+            "Nguy_hiem_khac",
+            "Chieu_cao_tinh_khong_thuc_te",
+            "Cam_o_to_quay_dau_xe_(duoc_re_trai)"
+        ]
+
+    def _load_nlp_model(self):
+        """Tải mô hình NLP (Vintern) và processor."""
+        print("[INFO] Đang tải mô hình NLP (Vintern)...")
+        try:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            self.nlp_processor = AutoProcessor.from_pretrained("5CD-AI/Vintern-1B-v3_5", trust_remote_code=True)
+            self.nlp_model = AutoModel.from_pretrained("5CD-AI/Vintern-1B-v3_5", trust_remote_code=True).to(self.device)
+            print(f"[INFO] Đã tải xong mô hình NLP và chạy trên {self.device}.")
+        except Exception as e:
+            print(f"[ERROR] Không thể tải mô hình NLP: {e}")
+            self.nlp_model = None
+            self.nlp_processor = None
+
+    def _get_text_from_sign(self, sign_image: np.ndarray) -> str:
+        """Sử dụng Vintern để đọc văn bản từ ảnh biển báo."""
+        if self.nlp_model is None or self.nlp_processor is None:
+            return ""
+        try:
+            rgb_image = cv2.cvtColor(sign_image, cv2.COLOR_BGR2RGB)
+            inputs = self.nlp_processor(images=rgb_image, return_tensors="pt").to(self.device)
+            generated_ids = self.nlp_model.generate(**inputs, max_length=64)
+            generated_text = self.nlp_processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            cleaned_text = generated_text.replace("<BOS>", "").replace("<EOS>", "").strip()
+            return cleaned_text
+        except Exception as e:
+            print(f"[ERROR] Lỗi khi xử lý OCR: {e}")
+            return ""
+
     def smooth_label(self, class_idx, obj_id):
         if obj_id not in self.label_buffers:
             self.label_buffers[obj_id] = deque(maxlen=self.buffer_size)
@@ -153,8 +192,25 @@ class RealTimeTrafficSignDetector:
                     'confidence': float(box.conf),
                     'class_id': class_idx_smooth,
                     'class_label': class_label,
-                    'class_label_vi': class_label_vi
+                    'class_label_vi': class_label_vi,
+                    'ocr_text': None # Khởi tạo
                 }
+
+                # Thêm xử lý OCR
+                if class_label_vi in self.TARGET_CLASSES_FOR_NLP:
+                    x1, y1, x2, y2 = map(int, detection['bbox'])
+                    padding = 5
+                    crop_x1 = max(0, x1 - padding)
+                    crop_y1 = max(0, y1 - padding)
+                    crop_x2 = min(frame.shape[1], x2 + padding)
+                    crop_y2 = min(frame.shape[0], y2 + padding)
+
+                    if crop_y2 > crop_y1 and crop_x2 > crop_x1:
+                        sign_crop = frame[crop_y1:crop_y2, crop_x1:crop_x2]
+                        ocr_text = self._get_text_from_sign(sign_crop)
+                        if ocr_text:
+                            detection['ocr_text'] = ocr_text
+
                 detections.append(detection)
         return detections
 
@@ -162,10 +218,19 @@ class RealTimeTrafficSignDetector:
         # Vẽ kết quả lên ảnh
         for det in detections:
             x1, y1, x2, y2 = map(int, det['bbox'])
-            label = f"{det['class_label']} | {det['class_label_vi']} | {det['confidence']:.2f}"
+            label = f"{det['class_label_vi']} | {det['confidence']:.2f}"
             color = (0, 255, 0)
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
             cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+            
+            # Hiển thị kết quả OCR nếu có
+            if det.get('ocr_text'):
+                ocr_label = f"OCR: {det['ocr_text']}"
+                text_y_pos = y2 + 20
+                (text_width, text_height), baseline = cv2.getTextSize(ocr_label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+                cv2.rectangle(frame, (x1, text_y_pos - text_height - baseline), (x1 + text_width, text_y_pos + baseline), (0, 0, 0), -1)
+                cv2.putText(frame, ocr_label, (x1, text_y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                
         cv2.imshow('Traffic Sign Detection - Press q to quit', frame)
 
     def run_webcam(self, cam_id=0, save_video=True):
@@ -194,13 +259,8 @@ class RealTimeTrafficSignDetector:
                 break
             detections = self.predict_frame(frame)
             frame_draw = frame.copy()
-            for det in detections:
-                x1, y1, x2, y2 = map(int, det['bbox'])
-                label = f"{det['class_label']} | {det['class_label_vi']} | {det['confidence']:.2f}"
-                color = (0, 255, 0)
-                cv2.rectangle(frame_draw, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(frame_draw, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-            cv2.imshow('Traffic Sign Detection - Press q to quit', frame_draw)
+            self.draw_and_show(frame_draw, detections)
+            
             if out is not None:
                 out.write(frame_draw)
             if cv2.waitKey(1) & 0xFF == ord('q'):
