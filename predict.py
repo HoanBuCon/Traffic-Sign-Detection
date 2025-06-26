@@ -11,6 +11,7 @@ from utils import ImageEnhancer, VisualizationUtils, FileUtils
 import glob
 import yaml
 import unicodedata
+from transformers import AutoModel, AutoProcessor
 
 # Thêm thư mục gốc của project vào sys.path
 project_root = os.path.abspath(os.path.dirname(__file__))
@@ -146,6 +147,43 @@ class TrafficSignDetector:
             data_yaml = yaml.safe_load(f)
             self.class_names = data_yaml.get('names', {})
         
+        self._load_nlp_model()
+        # Các lớp biển báo mà chúng ta muốn chạy OCR để đọc chữ
+        self.TARGET_CLASSES_FOR_NLP = [
+            "Bien_gop_lan_duong_theo_phuong_tien",
+            "Nguy_hiem_khac",
+            "Chieu_cao_tinh_khong_thuc_te",
+            "Cam_o_to_quay_dau_xe_(duoc_re_trai)"
+        ]
+
+    def _load_nlp_model(self):
+        """Tải mô hình NLP (Vintern) và processor."""
+        print("[INFO] Đang tải mô hình NLP (Vintern)...")
+        try:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            self.nlp_processor = AutoProcessor.from_pretrained("5CD-AI/Vintern-1B-v3_5", trust_remote_code=True)
+            self.nlp_model = AutoModel.from_pretrained("5CD-AI/Vintern-1B-v3_5", trust_remote_code=True).to(self.device)
+            print(f"[INFO] Đã tải xong mô hình NLP và chạy trên {self.device}.")
+        except Exception as e:
+            print(f"[ERROR] Không thể tải mô hình NLP: {e}")
+            self.nlp_model = None
+            self.nlp_processor = None
+
+    def _get_text_from_sign(self, sign_image: np.ndarray) -> str:
+        """Sử dụng Vintern để đọc văn bản từ ảnh biển báo."""
+        if self.nlp_model is None or self.nlp_processor is None:
+            return ""
+        try:
+            rgb_image = cv2.cvtColor(sign_image, cv2.COLOR_BGR2RGB)
+            inputs = self.nlp_processor(images=rgb_image, return_tensors="pt").to(self.device)
+            generated_ids = self.nlp_model.generate(**inputs, max_length=64)
+            generated_text = self.nlp_processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            cleaned_text = generated_text.replace("<BOS>", "").replace("<EOS>", "").strip()
+            return cleaned_text
+        except Exception as e:
+            print(f"[ERROR] Lỗi khi xử lý OCR: {e}")
+            return ""
+
     def enhance_image_for_inference(self, image: np.ndarray) -> np.ndarray:
         """
         Apply multiple enhancement techniques for better inference
@@ -224,13 +262,36 @@ class TrafficSignDetector:
                 }
                 detections.append(detection)
         
-        # Draw detections
-        annotated_image = VisualizationUtils.draw_detections(
-            image,
-            detections,
-            class_names=self.class_names,
-            confidence_threshold=self.config.CONFIDENCE_THRESHOLD
-        )
+        # Thêm OCR cho các biển báo cần thiết
+        for det in detections:
+            class_idx = det['class_id']
+            class_label_vi = descriptions_vi_no_diacritics[class_idx] if class_idx < len(descriptions_vi_no_diacritics) else ""
+            if class_label_vi in self.TARGET_CLASSES_FOR_NLP:
+                x1, y1, x2, y2 = det['bbox']
+                padding = 5
+                crop_x1 = max(0, x1 - padding)
+                crop_y1 = max(0, y1 - padding)
+                crop_x2 = min(image.shape[1], x2 + padding)
+                crop_y2 = min(image.shape[0], y2 + padding)
+                
+                if crop_y2 > crop_y1 and crop_x2 > crop_x1:
+                    sign_crop = image[crop_y1:crop_y2, crop_x1:crop_x2]
+                    det['ocr_text'] = self._get_text_from_sign(sign_crop)
+
+        # Vẽ bounding boxes và labels
+        annotated_image = image.copy()
+        for det in detections:
+            # Vẽ box và label chính
+            annotated_image = VisualizationUtils.draw_bounding_box(annotated_image, det, self.class_names, descriptions_vi)
+            
+            # Vẽ text OCR nếu có
+            if det.get('ocr_text'):
+                x1, y1, x2, y2 = det['bbox']
+                ocr_label = f"OCR: {det['ocr_text']}"
+                text_y_pos = y2 + 20
+                (text_width, text_height), baseline = cv2.getTextSize(ocr_label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+                cv2.rectangle(annotated_image, (x1, text_y_pos - text_height - baseline), (x1 + text_width, text_y_pos + baseline), (0, 0, 0), -1)
+                cv2.putText(annotated_image, ocr_label, (x1, text_y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
         # Save result if requested
         if save_result:
