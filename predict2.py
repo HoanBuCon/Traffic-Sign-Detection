@@ -8,8 +8,103 @@ from config import Config
 from utils import ImageEnhancer, VisualizationUtils
 import unicodedata
 
-# Danh sách nhãn tiếng Việt (copy từ predict.py)
-descriptions_vi = [
+# Thêm ánh xạ class -> mô tả tiếng Việt đầy đủ
+class_vi_map = {
+    "W.224": "Đường hẹp cả hai phía",
+    "W.205c": "Đường bị hẹp về phía bên trái",
+    "P.102": "Cấm đi ngược chiều",
+    "R.302a": "Hướng phải đi thẳng",
+    "W.205a": "Đường bị hẹp về phía bên phải",
+    "W.207": "Đường giao nhau",
+    "W.201a": "Chỗ ngoặt nguy hiểm vòng bên trái",
+    "P.123a": "Cấm rẽ trái",
+    "I.434a": "Biển tên đường (kiểu 1)",
+    "R.303": "Hướng phải rẽ",
+    "P.130": "Cấm dừng xe và đỗ xe",
+    "I.409": "Chỉ dẫn khu công nghiệp",
+    "R.415a": "Khu vực cấm đỗ xe",
+    "W.245a": "Đường có ổ gà, lồi lõm",
+    "P.106a*Xe tải": "Cấm xe tải",
+    "W.203c": "Đường người đi bộ cắt ngang",
+    "P.117*": "Cấm xe đạp",
+    "P.124a*": "Cấm xe máy",
+    "P.107": "Cấm quay đầu xe",
+    "P.124d": "Cấm xe khách và xe tải",
+    "P.103a": "Cấm ô tô",
+    "W.203b": "Đường người đi bộ cắt ngang",
+    "W.221b": "Đường có vật cản",
+    "P.111": "Cấm vượt",
+    "P.129": "Cấm bóp còi",
+    "S.505a*Xe_may": "Biển phụ áp dụng cho xe máy",
+    "W.246a": "Nguy hiểm khác",
+    "W.225": "Đường trơn",
+    "S.505a*Xe_tai_va_cong": "Biển phụ áp dụng cho xe tải và container",
+    "P.104": "Cấm xe kéo",
+    "S.505a*Xe_tai": "Biển phụ áp dụng cho xe tải",
+    "Camera": "Camera giao thông",
+    "P.123b": "Cấm rẽ phải",
+    "W.202b": "Chỗ ngoặt nguy hiểm vòng bên phải",
+    "B.8a": "Biển báo chỉ hướng",
+    "P.137": "Hạn chế chiều cao",
+    "P.139": "Hạn chế chiều rộng",
+    "W.205b": "Đường bị hẹp cả hai phía",
+    "P.127*50": "Giới hạn tốc độ tối đa 50 km/h",
+    "P.127*60": "Giới hạn tốc độ tối đa 60 km/h",
+    "P.127*80": "Giới hạn tốc độ tối đa 80 km/h",
+    "P.127*40": "Giới hạn tốc độ tối đa 40 km/h",
+    "R.301e": "Hướng đi ưu tiên",
+    "W.239b*": "Nguy hiểm do súc vật",
+    "W.233": "Gió ngang",
+    "I.407a": "Chỉ dẫn giao lộ",
+    "P.131a": "Cấm đỗ xe",
+    "P.124b1": "Cấm xe tải",
+    "W.210": "Giao nhau với đường sắt có rào chắn",
+    "P.124c": "Cấm xe mô tô ba bánh",
+    "W.201b": "Chỗ ngoặt nguy hiểm vòng bên phải",
+    "W.246c": "Chú ý chướng ngại vật",
+    "DP.135": "Hết hạn chế tốc độ",
+    "P.103b": "Cấm ô tô khách",
+    "P.103c": "Cấm ô tô tải",
+    "P.106a": "Cấm xe tải",
+    "P.106b": "Cấm xe tải trên 2,5 tấn",
+    "P.107a": "Cấm quay đầu xe (trừ xe máy và xe đạp)",
+    "P.112": "Cấm xe kéo moóc",
+    "P.115": "Cấm xe người kéo",
+    "P.117": "Cấm xe đạp",
+    "P.124a": "Cấm xe máy",
+    "P.124b": "Cấm xe mô tô",
+    "P.125": "Cấm xe công nông",
+    "P.127": "Giới hạn tốc độ tối đa",
+    "P.128": "Cấm sử dụng đèn chiếu xa",
+    "P.245a": "Cấm dừng xe",
+    "R.301a": "Đường ưu tiên",
+    "R.301c": "Hướng đi phải theo",
+    "R.301d": "Hướng đi phải theo (bên phải)",
+    "R.302b": "Phải đi vòng chướng ngại vật",
+    "R.407a": "Đường một chiều",
+    "R.409": "Chỗ quay xe",
+    "R.425": "Chỉ dẫn bệnh viện",
+    "R.434": "Bến xe buýt",
+    "S.509a": "Thuyết minh biển chính",
+    "W.202a": "Đường ngoặt liên tiếp",
+    "W.205d": "Đường giao nhau",
+    "W.207a": "Giao nhau với đường không ưu tiên (bên trái và bên phải)",
+    "W.207b": "Giao nhau với đường không ưu tiên (bên phải)",
+    "W.207c": "Giao nhau với đường không ưu tiên (bên trái)",
+    "W.208": "Giao nhau với đường ưu tiên",
+    "W.209": "Giao nhau có tín hiệu đèn",
+    "W.219": "dốc xuống nguy hiểm",
+    "W.227": "Báo hiệu công trường",
+    "W.235": "Đường đôi"
+}
+
+# Đọc danh sách class đúng thứ tự từ data.yaml
+with open('data.yaml', 'r', encoding='utf-8') as f:
+    data_yaml = yaml.safe_load(f)
+class_names = data_yaml['names']
+
+# descriptions_vi mới: đúng thứ tự class_names, ưu tiên giữ mô tả cũ nếu có, bổ sung nghĩa mới nếu chưa có, nếu vẫn chưa có thì để 'Chưa có mô tả'
+old_descriptions = [
     "Đường người đi bộ cắt ngang",
     "Đường giao nhau (ngã ba bên phải)",
     "Cấm đi ngược chiều",
@@ -63,6 +158,14 @@ descriptions_vi = [
     "Chỗ ngoặt nguy hiểm vòng bên phải",
     "Chú ý chướng ngại vật – vòng tránh sang bên phải"
 ]
+descriptions_vi = []
+for i, class_name in enumerate(class_names):
+    if i < len(old_descriptions):
+        descriptions_vi.append(old_descriptions[i])
+    elif class_name in class_vi_map:
+        descriptions_vi.append(class_vi_map[class_name])
+    else:
+        descriptions_vi.append("Chưa có mô tả")
 
 def remove_vietnamese_diacritics(text):
     text = unicodedata.normalize('NFD', text)

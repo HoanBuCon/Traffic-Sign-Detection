@@ -1,8 +1,8 @@
 task: detect
 mode: train
-model: yolov8m.pt
+model: all_weight\tmp_resume.pt
 data: data.yaml
-epochs: 25
+epochs: 50
 time: null
 patience: 50
 batch: 8

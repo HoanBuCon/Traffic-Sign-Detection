@@ -15,6 +15,7 @@ real_time_output/
 # Dữ liệu huấn luyện và dự đoán
 # custom_images/ (không còn dùng)
 datasetv2/
+increase_dataset/
 
 # File tạm, cache, hệ điều hành
 __pycache__/
@@ -51,4 +52,4 @@ ENV/
 *.7z
 
 input/
-all_weight/ 
+all_weight/

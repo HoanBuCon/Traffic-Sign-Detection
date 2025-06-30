@@ -6,6 +6,7 @@ from utils import DataAugmentation
 import torch
 from pathlib import Path
 import glob
+import shutil
 
 class TrafficSignTrainer:
     def __init__(self):
@@ -22,6 +23,24 @@ class TrafficSignTrainer:
         nums = [int(d.replace('train', '')) for d in existing if d.replace('train', '').isdigit()]
         next_num = max(nums) + 1 if nums else 1
         return os.path.join(self.all_weight_dir, f'train{next_num}')
+        
+    def get_latest_weight(self):
+        """Find the latest best.pt or last.pt in all_weight/trainX, return its path or None if not found"""
+        existing = [d for d in os.listdir(self.all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(self.all_weight_dir, d))]
+        if not existing:
+            return None
+        nums = [int(d.replace('train', '')) for d in existing if d.replace('train', '').isdigit()]
+        if not nums:
+            return None
+        latest_num = max(nums)
+        latest_dir = os.path.join(self.all_weight_dir, f'train{latest_num}')
+        best_path = os.path.join(latest_dir, 'best.pt')
+        last_path = os.path.join(latest_dir, 'last.pt')
+        if os.path.exists(best_path):
+            return best_path
+        elif os.path.exists(last_path):
+            return last_path
+        return None
         
     def setup_training(self):
         """Setup training environment and create necessary files/directories"""
@@ -47,10 +66,20 @@ class TrafficSignTrainer:
         print(f"Device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}")
         
     def train(self):
-        """Train the YOLOv8 model on traffic sign dataset"""
+        """Train the YOLOv8 model on traffic sign dataset, resuming from latest weights if available (without overwriting them)"""
         try:
-            # Load the model
-            model = YOLO(self.config.MODEL_SIZE)
+            # Check for latest weights
+            latest_weight = self.get_latest_weight()
+            temp_resume_path = None
+            if latest_weight is not None:
+                # Copy to a temp file to avoid overwriting
+                temp_resume_path = os.path.join(self.all_weight_dir, 'tmp_resume.pt')
+                shutil.copy2(latest_weight, temp_resume_path)
+                print(f"[INFO] Resume training from: {latest_weight} (copied to {temp_resume_path})")
+                model = YOLO(temp_resume_path)
+            else:
+                print("[INFO] No previous weights found. Training from scratch.")
+                model = YOLO(self.config.MODEL_SIZE)
             
             # Train the model
             results = model.train(
