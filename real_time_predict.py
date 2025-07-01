@@ -144,7 +144,7 @@ class RealTimeTrafficSignDetector:
             return ""
         try:
             rgb_image = cv2.cvtColor(sign_image, cv2.COLOR_BGR2RGB)
-            inputs = self.nlp_processor(images=rgb_image, return_tensors="pt").to(self.device)
+            inputs = self.nlp_processor(images=rgb_image, text="<BOS>", return_tensors="pt").to(self.device)
             generated_ids = self.nlp_model.generate(**inputs, max_length=64)
             generated_text = self.nlp_processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
             cleaned_text = generated_text.replace("<BOS>", "").replace("<EOS>", "").strip()
