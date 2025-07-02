@@ -11,7 +11,8 @@ import unicodedata
 from collections import deque, Counter
 from src.sort import Sort
 import torch
-from transformers import AutoModel, AutoProcessor
+from transformers import AutoModel, AutoProcessor, AutoModelForVision2Seq
+from PIL import Image
 
 # Thêm thư mục gốc của project vào sys.path để xử lý absolute imports
 project_root = os.path.abspath(os.path.dirname(__file__))
@@ -159,7 +160,7 @@ class RealTimeTrafficSignDetectorAdvanced:
         try:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
             self.nlp_processor = AutoProcessor.from_pretrained("5CD-AI/Vintern-1B-v3_5", trust_remote_code=True)
-            self.nlp_model = AutoModel.from_pretrained("5CD-AI/Vintern-1B-v3_5", trust_remote_code=True).to(self.device)
+            self.nlp_model = AutoModelForVision2Seq.from_pretrained("5CD-AI/Vintern-1B-v3_5", trust_remote_code=True).to(self.device)
             print(f"[INFO] Đã tải xong mô hình NLP và chạy trên {self.device}.")
         except Exception as e:
             print(f"[ERROR] Không thể tải mô hình NLP: {e}")
@@ -170,15 +171,12 @@ class RealTimeTrafficSignDetectorAdvanced:
         """Sử dụng Vintern để đọc văn bản từ ảnh biển báo."""
         if self.nlp_model is None or self.nlp_processor is None:
             return ""
-
         try:
-            # Chuyển BGR (cv2) sang RGB (transformers)
             rgb_image = cv2.cvtColor(sign_image, cv2.COLOR_BGR2RGB)
-            # Xử lý ảnh và đưa qua model
-            inputs = self.nlp_processor(images=rgb_image, text="<BOS>", return_tensors="pt").to(self.device)
+            pil_image = Image.fromarray(rgb_image)
+            inputs = self.nlp_processor(images=pil_image, text="<BOS>", return_tensors="pt").to(self.device)
             generated_ids = self.nlp_model.generate(**inputs, max_length=64)
             generated_text = self.nlp_processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-            # Loại bỏ các token không cần thiết
             cleaned_text = generated_text.replace("<BOS>", "").replace("<EOS>", "").strip()
             return cleaned_text
         except Exception as e:
