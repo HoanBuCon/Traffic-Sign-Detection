@@ -1,4 +1,5 @@
 import os
+import sys
 import cv2
 import torch
 from ultralytics import YOLO
@@ -10,8 +11,11 @@ from utils import ImageEnhancer, VisualizationUtils, FileUtils
 import glob
 import yaml
 import unicodedata
-from PIL import Image
-from transformers import AutoProcessor, AutoModelForVision2Seq
+
+# Thêm thư mục gốc của project vào sys.path
+project_root = os.path.abspath(os.path.dirname(__file__))
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
 # Hàm tạo thư mục predict mới
 def get_new_predict_dir(base_dir="output"):
@@ -137,7 +141,8 @@ class TrafficSignDetector:
         print(f"[INFO] Saving predictions to: {self.predictions_dir}")
         
         # Đọc class_names từ data.yaml
-        with open('data.yaml', 'r', encoding='utf-8') as f:
+        data_yaml_path = 'data.yaml' # File data.yaml nằm ở thư mục gốc
+        with open(data_yaml_path, 'r', encoding='utf-8') as f:
             data_yaml = yaml.safe_load(f)
             self.class_names = data_yaml.get('names', {})
         
@@ -259,35 +264,6 @@ class TrafficSignDetector:
                 self.predict_image(image_path)
             except Exception as e:
                 print(f"Error processing {image_path}: {str(e)}")
-
-    def _load_nlp_model(self):
-        """Tải mô hình NLP (Vintern) và processor."""
-        print("[INFO] Đang tải mô hình NLP (Vintern)...")
-        try:
-            self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            self.nlp_processor = AutoProcessor.from_pretrained("5CD-AI/Vintern-1B-v3_5", trust_remote_code=True)
-            self.nlp_model = AutoModelForVision2Seq.from_pretrained("5CD-AI/Vintern-1B-v3_5", trust_remote_code=True).to(self.device)
-            print(f"[INFO] Đã tải xong mô hình NLP và chạy trên {self.device}.")
-        except Exception as e:
-            print(f"[ERROR] Không thể tải mô hình NLP: {e}")
-            self.nlp_model = None
-            self.nlp_processor = None
-
-    def _get_text_from_sign(self, sign_image: np.ndarray) -> str:
-        """Sử dụng Vintern để đọc văn bản từ ảnh biển báo."""
-        if self.nlp_model is None or self.nlp_processor is None:
-            return ""
-        try:
-            rgb_image = cv2.cvtColor(sign_image, cv2.COLOR_BGR2RGB)
-            pil_image = Image.fromarray(rgb_image)
-            inputs = self.nlp_processor(images=pil_image, text="<BOS>", return_tensors="pt").to(self.device)
-            generated_ids = self.nlp_model.generate(**inputs, max_length=64)
-            generated_text = self.nlp_processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-            cleaned_text = generated_text.replace("<BOS>", "").replace("<EOS>", "").strip()
-            return cleaned_text
-        except Exception as e:
-            print(f"[ERROR] Lỗi khi xử lý OCR: {e}")
-            return ""
 
 def main():
     """Main function to run inference"""
