@@ -1,6 +1,6 @@
 # Loại trừ các file/directory nặng và không cần thiết
 # Model weights
-*.pt
+# *.pt
 *.pth
 *.onnx
 *.ckpt
@@ -12,6 +12,7 @@ output/
 runs/
 logs/
 real_time_output/
+ocr_log.txt
 
 # Dữ liệu huấn luyện và dự đoán
 dataset/
