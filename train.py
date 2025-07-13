@@ -7,6 +7,7 @@ import torch
 from pathlib import Path
 import glob
 import shutil
+import re
 
 class TrafficSignTrainer:
     def __init__(self):
@@ -17,11 +18,13 @@ class TrafficSignTrainer:
         self.all_weight_dir = 'all_weight'
         os.makedirs(self.all_weight_dir, exist_ok=True)
         
-    def get_next_train_dir(self):
-        """Tìm tên thư mục train tiếp theo trong all_weight"""
+    def get_next_train_dir(self, continue_from=None):
+        """Tìm tên thư mục train tiếp theo trong all_weight. Nếu continue_from, thêm hậu tố '_(continue from X)'"""
         existing = [d for d in os.listdir(self.all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(self.all_weight_dir, d))]
-        nums = [int(d.replace('train', '')) for d in existing if d.replace('train', '').isdigit()]
+        nums = [int(d.replace('train', '').split('_')[0]) for d in existing if d.replace('train', '').split('_')[0].isdigit()]
         next_num = max(nums) + 1 if nums else 1
+        if continue_from is not None:
+            return os.path.join(self.all_weight_dir, f'train{next_num}_(continue from {continue_from})')
         return os.path.join(self.all_weight_dir, f'train{next_num}')
         
     def get_latest_weight(self):
@@ -66,20 +69,31 @@ class TrafficSignTrainer:
         print(f"Device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}")
         
     def train(self):
-        """Train the YOLOv8 model on traffic sign dataset, resuming from latest weights if available (without overwriting them)"""
+        """Train the YOLOv8 model on traffic sign dataset, resuming from latest weights if available (không ghi đè train cũ, copy folder train cũ sang train mới trước khi train)"""
         try:
             # Check for latest weights
             latest_weight = self.get_latest_weight()
             temp_resume_path = None
+            train_dir = None
+            continue_from_num = None
             if latest_weight is not None:
-                # Copy to a temp file to avoid overwriting
-                temp_resume_path = os.path.join(self.all_weight_dir, 'tmp_resume.pt')
-                shutil.copy2(latest_weight, temp_resume_path)
-                print(f"[INFO] Resume training from: {latest_weight} (copied to {temp_resume_path})")
-                model = YOLO(temp_resume_path)
+                prev_train_dir = os.path.dirname(latest_weight)
+                # Extract train number
+                m = re.search(r'train(\d+)', prev_train_dir)
+                if m:
+                    continue_from_num = m.group(1)
+                train_dir = self.get_next_train_dir(continue_from=continue_from_num)
+                shutil.copytree(prev_train_dir, train_dir)
+                print(f"[INFO] Copied previous train folder {prev_train_dir} to {train_dir}")
+                resume_weight_path = os.path.join(train_dir, 'best.pt')
+                shutil.copy2(latest_weight, resume_weight_path)
+                print(f"[INFO] Resume training from: {latest_weight} (copied to {resume_weight_path})")
+                model = YOLO(resume_weight_path)
             else:
                 print("[INFO] No previous weights found. Training from scratch.")
                 model = YOLO(self.config.MODEL_SIZE)
+                train_dir = self.get_next_train_dir()
+            os.makedirs(train_dir, exist_ok=True)
             
             # Train the model
             results = model.train(
@@ -120,11 +134,9 @@ class TrafficSignTrainer:
                 close_mosaic=10,  # Close mosaic augmentation for last 10 epochs
             )
             
-            # Lưu best.pt và last.pt vào thư mục all_weight/trainX
+            # Lưu best.pt và last.pt vào thư mục train_dir
             best_model_path = os.path.join('runs', 'traffic_sign_detection', 'weights', 'best.pt')
             last_model_path = os.path.join('runs', 'traffic_sign_detection', 'weights', 'last.pt')
-            train_dir = self.get_next_train_dir()
-            os.makedirs(train_dir, exist_ok=True)
             if os.path.exists(best_model_path):
                 dest_best = os.path.join(train_dir, 'best.pt')
                 os.replace(best_model_path, dest_best)

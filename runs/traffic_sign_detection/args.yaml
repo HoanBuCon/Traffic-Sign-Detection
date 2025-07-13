@@ -1,8 +1,8 @@
 task: detect
 mode: train
-model: all_weight\tmp_resume.pt
+model: all_weight\train6_(continue from 5)\best.pt
 data: data.yaml
-epochs: 50
+epochs: 25
 time: null
 patience: 50
 batch: 8
