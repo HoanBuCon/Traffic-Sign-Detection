@@ -1,24 +1,54 @@
-# Loại trừ các file/directory nặng và không cần thiết
-# Model weights
-# *.pt
+# ========================================
+# TRAFFIC SIGN DETECTION PROJECT
+# ========================================
+
+# ========================================
+# MODEL WEIGHTS & CHECKPOINTS
+# ========================================
+# Model weights (giữ lại một số file mẫu)
+*.pt
 *.pth
 *.onnx
 *.ckpt
 *.weights
 
-# Output, logs, and results
+# Training history (chứa nhiều file nặng)
+training_history/
+all_weight/
+
+# ========================================
+# OUTPUT & RESULTS
+# ========================================
 output/
 runs/
-logs/
 real_time_output/
-ocr_log.txt
+augmentation_demo/
+batch_augmentation_demo/
+augmented_dataset/
 
-# Dữ liệu huấn luyện và dự đoán
-# custom_images/ (không còn dùng)
+# ========================================
+# DATASET & DATA FILES
+# ========================================
 datasetv2/
 increase_dataset/
+dataset/
 
-# File tạm, cache, hệ điều hành
+# Input/Output directories
+input/
+output/
+
+# ========================================
+# LOGS & CACHE
+# ========================================
+logs/
+*.log
+*.cache
+*.json
+increase_dataset_merged.log
+
+# ========================================
+# PYTHON CACHE & TEMP FILES
+# ========================================
 __pycache__/
 *.pyc
 *.pyo
@@ -26,31 +56,97 @@ __pycache__/
 *.swp
 *.bak
 *.tmp
+
+# ========================================
+# SYSTEM FILES
+# ========================================
 .DS_Store
 Thumbs.db
+desktop.ini
 
+# ========================================
+# DEVELOPMENT ENVIRONMENT
+# ========================================
 # Jupyter notebook checkpoints
 .ipynb_checkpoints/
 
 # VSCode settings
 .vscode/
+.idea/
 
 # Python virtual environment
 venv/
 .env/
 ENV/
+.venv/
 
-# Ultralytics cache/settings
-*.cache
-*.log
-*.json
-
-# Khác
+# ========================================
+# COMPRESSED FILES
+# ========================================
 *.zip
 *.tar
 *.tar.gz
 *.rar
 *.7z
 
-input/
-all_weight/
+# ========================================
+# SPECIFIC PROJECT FILES
+# ========================================
+# Training session specific files (có thể thay đổi)
+# Uncomment nếu muốn ignore tất cả training sessions
+# training_history/train*/
+
+# ========================================
+# TEMPORARY FILES
+# ========================================
+temp/
+tmp/
+temp_*/
+
+# ========================================
+# BACKUP FILES
+# ========================================
+*.backup
+*.old
+*_backup/
+
+# ========================================
+# DEBUG & TEST FILES
+# ========================================
+debug/
+test_output/
+sample_output/
+
+# ========================================
+# ENVIRONMENT & CONFIG
+# ========================================
+.env
+.env.local
+.env.production
+config.local.py
+
+# ========================================
+# DOCUMENTATION BUILD
+# ========================================
+docs/_build/
+docs/build/
+
+# ========================================
+# NOTEBOOKS (nếu có)
+# ========================================
+*.ipynb
+
+# ========================================
+# EXCEPTIONS - FILES TO KEEP
+# ========================================
+# Giữ lại một số file config quan trọng
+!data.yaml
+!config.py
+!requirements.txt
+
+# Giữ lại README files
+!README*
+!*.md
+
+# Giữ lại source code
+!*.py

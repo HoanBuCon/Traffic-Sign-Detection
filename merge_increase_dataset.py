@@ -10,9 +10,9 @@ DATASET_IMAGES = 'datasetv2/images'
 DATASET_LABELS = 'datasetv2/labels'
 LOG_FILE = 'increase_dataset_merged.log'
 
-# Danh sách class mới (từ bạn cung cấp)
+# Danh sách class mới (cập nhật cho 12 lớp)
 new_classes = [
-    "DP.135", "P.102", "P.103a", "P.103b", "P.103c", "P.104", "P.106a", "P.106b", "P.107a", "P.112", "P.115", "P.117", "P.123a", "P.123b", "P.124a", "P.124b", "P.124c", "P.125", "P.127", "P.128", "P.130", "P.131a", "P.137", "P.245a", "R.301a", "R.301c", "R.301d", "R.301e", "R.302a", "R.302b", "R.303", "R.407a", "R.409", "R.425", "R.434", "S.509a", "W.201a", "W.201b", "W.202a", "W.202b", "W.203b", "W.203c", "W.205a", "W.205b", "W.205d", "W.207a", "W.207b", "W.207c", "W.208", "W.209", "W.210", "W.219", "W.221b", "W.224", "W.225", "W.227", "W.233", "W.235", "W.245a"
+    "i.423.b", "p.102", "p.106.b", "p.130", "p.131.a", "r.308.b", "sus", "w.201.a", "w.203.c", "w.207.b", "w.207.c", "w.209"
 ]
 
 # Đọc class cũ từ data.yaml

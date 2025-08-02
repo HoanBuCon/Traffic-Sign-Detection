@@ -8,94 +8,20 @@ from config import Config
 from utils import ImageEnhancer, VisualizationUtils
 import unicodedata
 
-# Thêm ánh xạ class -> mô tả tiếng Việt đầy đủ
+# Thêm ánh xạ class -> mô tả tiếng Việt đầy đủ (cập nhật cho 12 lớp mới)
 class_vi_map = {
-    "W.224": "Đường hẹp cả hai phía",
-    "W.205c": "Đường bị hẹp về phía bên trái",
-    "P.102": "Cấm đi ngược chiều",
-    "R.302a": "Hướng phải đi thẳng",
-    "W.205a": "Đường bị hẹp về phía bên phải",
-    "W.207": "Đường giao nhau",
-    "W.201a": "Chỗ ngoặt nguy hiểm vòng bên trái",
-    "P.123a": "Cấm rẽ trái",
-    "I.434a": "Biển tên đường (kiểu 1)",
-    "R.303": "Hướng phải rẽ",
-    "P.130": "Cấm dừng xe và đỗ xe",
-    "I.409": "Chỉ dẫn khu công nghiệp",
-    "R.415a": "Khu vực cấm đỗ xe",
-    "W.245a": "Đường có ổ gà, lồi lõm",
-    "P.106a*Xe tải": "Cấm xe tải",
-    "W.203c": "Đường người đi bộ cắt ngang",
-    "P.117*": "Cấm xe đạp",
-    "P.124a*": "Cấm xe máy",
-    "P.107": "Cấm quay đầu xe",
-    "P.124d": "Cấm xe khách và xe tải",
-    "P.103a": "Cấm ô tô",
-    "W.203b": "Đường người đi bộ cắt ngang",
-    "W.221b": "Đường có vật cản",
-    "P.111": "Cấm vượt",
-    "P.129": "Cấm bóp còi",
-    "S.505a*Xe_may": "Biển phụ áp dụng cho xe máy",
-    "W.246a": "Nguy hiểm khác",
-    "W.225": "Đường trơn",
-    "S.505a*Xe_tai_va_cong": "Biển phụ áp dụng cho xe tải và container",
-    "P.104": "Cấm xe kéo",
-    "S.505a*Xe_tai": "Biển phụ áp dụng cho xe tải",
-    "Camera": "Camera giao thông",
-    "P.123b": "Cấm rẽ phải",
-    "W.202b": "Chỗ ngoặt nguy hiểm vòng bên phải",
-    "B.8a": "Biển báo chỉ hướng",
-    "P.137": "Hạn chế chiều cao",
-    "P.139": "Hạn chế chiều rộng",
-    "W.205b": "Đường bị hẹp cả hai phía",
-    "P.127*50": "Giới hạn tốc độ tối đa 50 km/h",
-    "P.127*60": "Giới hạn tốc độ tối đa 60 km/h",
-    "P.127*80": "Giới hạn tốc độ tối đa 80 km/h",
-    "P.127*40": "Giới hạn tốc độ tối đa 40 km/h",
-    "R.301e": "Hướng đi ưu tiên",
-    "W.239b*": "Nguy hiểm do súc vật",
-    "W.233": "Gió ngang",
-    "I.407a": "Chỉ dẫn giao lộ",
-    "P.131a": "Cấm đỗ xe",
-    "P.124b1": "Cấm xe tải",
-    "W.210": "Giao nhau với đường sắt có rào chắn",
-    "P.124c": "Cấm xe mô tô ba bánh",
-    "W.201b": "Chỗ ngoặt nguy hiểm vòng bên phải",
-    "W.246c": "Chú ý chướng ngại vật",
-    "DP.135": "Hết hạn chế tốc độ",
-    "P.103b": "Cấm ô tô khách",
-    "P.103c": "Cấm ô tô tải",
-    "P.106a": "Cấm xe tải",
-    "P.106b": "Cấm xe tải trên 2,5 tấn",
-    "P.107a": "Cấm quay đầu xe (trừ xe máy và xe đạp)",
-    "P.112": "Cấm xe kéo moóc",
-    "P.115": "Cấm xe người kéo",
-    "P.117": "Cấm xe đạp",
-    "P.124a": "Cấm xe máy",
-    "P.124b": "Cấm xe mô tô",
-    "P.125": "Cấm xe công nông",
-    "P.127": "Giới hạn tốc độ tối đa",
-    "P.128": "Cấm sử dụng đèn chiếu xa",
-    "P.245a": "Cấm dừng xe",
-    "R.301a": "Đường ưu tiên",
-    "R.301c": "Hướng đi phải theo",
-    "R.301d": "Hướng đi phải theo (bên phải)",
-    "R.302b": "Phải đi vòng chướng ngại vật",
-    "R.407a": "Đường một chiều",
-    "R.409": "Chỗ quay xe",
-    "R.425": "Chỉ dẫn bệnh viện",
-    "R.434": "Bến xe buýt",
-    "S.509a": "Thuyết minh biển chính",
-    "W.202a": "Đường ngoặt liên tiếp",
-    "W.205d": "Đường giao nhau",
-    "W.207a": "Giao nhau với đường không ưu tiên (bên trái và bên phải)",
-    "W.207b": "Giao nhau với đường không ưu tiên (bên phải)",
-    "W.207c": "Giao nhau với đường không ưu tiên (bên trái)",
-    "W.208": "Giao nhau với đường ưu tiên",
-    "W.209": "Giao nhau có tín hiệu đèn",
-    "W.219": "dốc xuống nguy hiểm",
-    "W.227": "Báo hiệu công trường",
-    "W.235": "Đường đôi"
+    "i.423.b": "Biển chỉ dẫn khoảng cách",
+    "p.102": "Cấm đi ngược chiều",
+    "p.106.b": "Cấm xe tải trên 2,5 tấn",
+    "p.130": "Cấm dừng xe và đỗ xe",
+    "p.131.a": "Cấm đỗ xe",
+    "r.308.b": "Hướng đi ưu tiên",
+    "sus": "Biển báo nghi ngờ",
+    "w.201.a": "Chỗ ngoặt nguy hiểm vòng bên trái",
+    "w.203.c": "Đường người đi bộ cắt ngang",
+    "w.207.b": "Giao nhau với đường ưu tiên",
+    "w.207.c": "Giao nhau với đường cùng cấp",
+    "w.209": "Cầu hẹp"
 }
 
 # Đọc danh sách class đúng thứ tự từ data.yaml
@@ -187,16 +113,23 @@ descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in 
 class RealTimeTrafficSignDetector:
     def __init__(self, model_path=None):
         if model_path is None:
-            # Tìm model mới nhất trong all_weight
-            all_weight_dir = 'all_weight'
-            train_dirs = [d for d in os.listdir(all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(all_weight_dir, d))]
+            # Tìm model mới nhất trong training_history
+            training_history_dir = 'training_history'
+            if not os.path.exists(training_history_dir):
+                raise FileNotFoundError("Không tìm thấy thư mục training_history! Hãy train model trước.")
+            
+            train_dirs = [d for d in os.listdir(training_history_dir) if d.startswith('train') and os.path.isdir(os.path.join(training_history_dir, d))]
             if not train_dirs:
-                raise FileNotFoundError("Không tìm thấy model đã train trong all_weight! Hãy train model trước.")
+                raise FileNotFoundError("Không tìm thấy model đã train trong training_history! Hãy train model trước.")
+            
             train_dirs_sorted = sorted(train_dirs, key=lambda x: int(x.replace('train', '')) if x.replace('train', '').isdigit() else 0)
-            latest_train_dir = os.path.join(all_weight_dir, train_dirs_sorted[-1])
-            best_pt_path = os.path.join(latest_train_dir, 'best.pt')
+            latest_train_dir = os.path.join(training_history_dir, train_dirs_sorted[-1])
+            weights_dir = os.path.join(latest_train_dir, 'weights')
+            best_pt_path = os.path.join(weights_dir, 'best.pt')
+            
             if not os.path.exists(best_pt_path):
-                raise FileNotFoundError(f"Không tìm thấy best.pt trong {latest_train_dir}!")
+                raise FileNotFoundError(f"Không tìm thấy best.pt trong {weights_dir}!")
+            
             model_path = best_pt_path
             print(f"[INFO] Sử dụng model: {model_path}")
         self.model = YOLO(model_path)

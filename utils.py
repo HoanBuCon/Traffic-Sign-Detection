@@ -1,54 +1,51 @@
 import cv2
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter
-import albumentations as A
-from typing import List, Tuple, Optional
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from typing import List, Tuple, Dict, Optional
 import os
-from pathlib import Path
-from skimage import exposure
-from scipy.ndimage import gaussian_filter
-import json
-import unicodedata
+import yaml
+from PIL import Image, ImageEnhance, ImageFilter
+import random
+import albumentations as A
 
 class ImageEnhancer:
-    """Class for enhancing image quality for better detection"""
+    """Class for enhancing image quality"""
     
     @staticmethod
     def enhance_image(image: np.ndarray, enhancement_level: float = 1.2) -> np.ndarray:
         """
-        Enhance image quality for better detection
+        Enhance image quality using multiple techniques
         
         Args:
             image: Input image as numpy array
-            enhancement_level: Enhancement factor (1.0 = no change)
+            enhancement_level: Enhancement strength (1.0 = no change)
             
         Returns:
-            Enhanced image
+            Enhanced image as numpy array
         """
         # Convert to PIL Image for enhancement
-        pil_image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        pil_image = Image.fromarray(image)
         
         # Enhance contrast
         contrast_enhancer = ImageEnhance.Contrast(pil_image)
         pil_image = contrast_enhancer.enhance(enhancement_level)
         
+        # Enhance brightness
+        brightness_enhancer = ImageEnhance.Brightness(pil_image)
+        pil_image = brightness_enhancer.enhance(enhancement_level)
+        
         # Enhance sharpness
         sharpness_enhancer = ImageEnhance.Sharpness(pil_image)
         pil_image = sharpness_enhancer.enhance(enhancement_level)
         
-        # Enhance brightness slightly
-        brightness_enhancer = ImageEnhance.Brightness(pil_image)
-        pil_image = brightness_enhancer.enhance(1.1)
-        
         # Convert back to numpy array
-        enhanced_image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-        
-        return enhanced_image
+        return np.array(pil_image)
     
     @staticmethod
     def denoise_image(image: np.ndarray, strength: float = 0.5) -> np.ndarray:
         """
-        Remove noise from image using multiple techniques
+        Remove noise from image using bilateral filter
         
         Args:
             image: Input image
@@ -57,77 +54,58 @@ class ImageEnhancer:
         Returns:
             Denoised image
         """
-        # Apply bilateral filter to preserve edges while removing noise
-        d = int(strength * 15)  # Diameter of pixel neighborhood
-        sigma_color = strength * 75
-        sigma_space = strength * 75
+        # Convert strength to filter parameters
+        d = int(15 * strength)  # Diameter of pixel neighborhood
+        sigma_color = 75 * strength  # Filter sigma in the color space
+        sigma_space = 75 * strength  # Filter sigma in the coordinate space
+        
+        # Apply bilateral filter
         denoised = cv2.bilateralFilter(image, d, sigma_color, sigma_space)
-        
-        # Apply additional non-local means denoising for stronger effect
-        if strength > 0.7:
-            h = 10  # Filter strength
-            denoised = cv2.fastNlMeansDenoisingColored(denoised, None, h, h, 7, 21)
-        
         return denoised
     
     @staticmethod
     def sharpen_image(image: np.ndarray, strength: float = 1.0) -> np.ndarray:
         """
-        Sharpen image using multiple techniques
+        Sharpen image using unsharp mask technique
         
         Args:
             image: Input image
-            strength: Sharpening strength multiplier
+            strength: Sharpening strength (0.0 to 2.0)
             
         Returns:
             Sharpened image
         """
-        # Create sharpening kernel
-        kernel = np.array([[-1,-1,-1],
-                         [-1, 9,-1],
-                         [-1,-1,-1]]) * strength
-        
-        # Apply kernel
-        sharpened = cv2.filter2D(image, -1, kernel)
-        
-        # Apply unsharp mask for additional sharpening
+        # Create unsharp mask
         gaussian = cv2.GaussianBlur(image, (0, 0), 2.0)
-        sharpened = cv2.addWeighted(sharpened, 1.5, gaussian, -0.5, 0)
+        unsharp_mask = cv2.addWeighted(image, 1.0 + strength, gaussian, -strength, 0)
         
-        return sharpened
+        # Ensure pixel values are in valid range
+        unsharp_mask = np.clip(unsharp_mask, 0, 255).astype(np.uint8)
+        return unsharp_mask
     
     @staticmethod
     def adjust_gamma(image: np.ndarray, gamma: float = 1.0) -> np.ndarray:
         """
-        Adjust gamma correction with additional contrast enhancement
+        Adjust gamma correction of image
         
         Args:
             image: Input image
-            gamma: Gamma value (1.0 = no change)
+            gamma: Gamma value (0.1 to 3.0)
             
         Returns:
             Gamma-corrected image
         """
-        # Apply gamma correction
+        # Build lookup table
         inv_gamma = 1.0 / gamma
-        table = np.array([((i / 255.0) ** inv_gamma) * 255
-                         for i in np.arange(0, 256)]).astype("uint8")
-        gamma_corrected = cv2.LUT(image, table)
+        table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
         
-        # Enhance contrast using CLAHE
-        lab = cv2.cvtColor(gamma_corrected, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-        cl = clahe.apply(l)
-        enhanced = cv2.merge((cl,a,b))
-        enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
-        
-        return enhanced
+        # Apply gamma correction
+        return cv2.LUT(image, table)
     
     @staticmethod
     def enhance_low_light(image: np.ndarray) -> np.ndarray:
         """
-        Enhance low-light images
+        Enhance low-light images using CLAHE
         
         Args:
             image: Input image
@@ -136,26 +114,20 @@ class ImageEnhancer:
             Enhanced image
         """
         # Convert to LAB color space
-        lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
+        lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
         
-        # Apply CLAHE to lightness channel
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-        cl = clahe.apply(l)
+        # Apply CLAHE to L channel
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        lab[:, :, 0] = clahe.apply(lab[:, :, 0])
         
-        # Merge channels
-        enhanced_lab = cv2.merge((cl,a,b))
-        enhanced = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
-        
-        # Adjust gamma for better visibility
-        enhanced = ImageEnhancer.adjust_gamma(enhanced, 1.2)
-        
+        # Convert back to RGB
+        enhanced = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
         return enhanced
     
     @staticmethod
     def reduce_blur(image: np.ndarray) -> np.ndarray:
         """
-        Reduce blur in images using deconvolution
+        Reduce blur using Wiener filter
         
         Args:
             image: Input image
@@ -163,288 +135,414 @@ class ImageEnhancer:
         Returns:
             Deblurred image
         """
-        # Convert to grayscale for processing
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Convert to grayscale for deblurring
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        else:
+            gray = image
         
-        # Apply Wiener deconvolution
-        psf = np.ones((5, 5)) / 25  # Point spread function
-        deblurred = np.zeros_like(image)
+        # Apply Wiener filter
+        kernel_size = 5
+        noise_var = 0.01
+        deblurred = cv2.filter2D(gray, -1, np.ones((kernel_size, kernel_size)) / (kernel_size * kernel_size))
         
-        # Process each channel
-        for i in range(3):
-            channel = image[:,:,i]
-            deblurred_channel = exposure.wiener(channel, psf)
-            deblurred[:,:,i] = (deblurred_channel * 255).astype(np.uint8)
+        # Convert back to RGB if original was RGB
+        if len(image.shape) == 3:
+            deblurred = cv2.cvtColor(deblurred, cv2.COLOR_GRAY2RGB)
         
         return deblurred
 
 class DataAugmentation:
-    """Class for data augmentation during training"""
+    """Class for advanced data augmentation using Albumentations"""
     
     def __init__(self, image_size: int = 640):
-        self.image_size = image_size
-        self.transform = A.Compose([
-            A.Resize(height=image_size, width=image_size, always_apply=True),
-            A.HorizontalFlip(p=0.5),
-            A.Rotate(limit=15, p=0.5),
-            A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
-            A.GaussianBlur(blur_limit=(3, 7), p=0.3),
-        ])
-    
-    def augment(self, image: np.ndarray, bboxes: List[List[float]] = None) -> Tuple[np.ndarray, List[List[float]]]:
         """
-        Apply augmentation to image and bounding boxes
+        Initialize data augmentation pipeline
+        
+        Args:
+            image_size: Target image size for resizing
+        """
+        # Create comprehensive augmentation pipeline
+        self.augmentation_pipeline = A.Compose([
+            # Geometric transformations
+            A.OneOf([
+                A.ShiftScaleRotate(
+                    shift_limit=0.1, scale_limit=0.2, rotate_limit=30,
+                    interpolation=cv2.INTER_LINEAR, border_mode=cv2.BORDER_CONSTANT,
+                    value=0, p=1.0
+                ),
+                A.Affine(
+                    scale=(0.8, 1.2), rotate=(-30, 30), translate_percent=(-0.1, 0.1),
+                    shear=(-10, 10), interpolation=cv2.INTER_LINEAR,
+                    border_mode=cv2.BORDER_CONSTANT, value=0, p=1.0
+                ),
+            ], p=0.8),
+            
+            # Color and brightness augmentations
+            A.OneOf([
+                A.RandomBrightnessContrast(
+                    brightness_limit=0.3, contrast_limit=0.3,
+                    brightness_by_max=True, p=1.0
+                ),
+                A.RandomGamma(gamma_limit=(80, 120), p=1.0),
+                A.HueSaturationValue(
+                    hue_shift_limit=20,
+                    sat_shift_limit=30,
+                    val_shift_limit=20,
+                    p=1.0
+                ),
+            ], p=0.8),
+            
+            # Noise and blur augmentations
+            A.OneOf([
+                A.GaussNoise(var_limit=(10.0, 50.0), p=1.0),
+                A.ISONoise(color_shift=(0.01, 0.05), p=1.0),
+                A.MultiplicativeNoise(multiplier=(0.9, 1.1), p=1.0),
+            ], p=0.4),
+            
+            A.OneOf([
+                A.MotionBlur(blur_limit=3, p=1.0),
+                A.MedianBlur(blur_limit=3, p=1.0),
+                A.GaussianBlur(blur_limit=3, p=1.0),
+            ], p=0.3),
+            
+            # Weather and lighting effects
+            A.OneOf([
+                A.RandomRain(
+                    slant_lower=-10, slant_upper=10,
+                    drop_length=20, drop_width=1, drop_color=(200, 200, 200),
+                    blur_value=3, brightness_coefficient=0.7,
+                    rain_type="drizzle", p=1.0
+                ),
+                A.RandomFog(fog_coef_lower=0.1, fog_coef_upper=0.3, p=1.0),
+                A.RandomSunFlare(
+                    flare_roi=(0, 0, 1, 0.5), angle_lower=0, angle_upper=1,
+                    num_flare_circles_lower=6, num_flare_circles_upper=10,
+                    src_radius=400, src_color=(255, 255, 255), p=1.0
+                ),
+            ], p=0.2),
+            
+            # Occlusion and cutout
+            A.OneOf([
+                A.CoarseDropout(
+                    max_holes=8, max_height=32, max_width=32,
+                    min_holes=1, min_height=8, min_width=8,
+                    fill_value=0, p=1.0
+                ),
+                A.GridDropout(
+                    ratio=0.1, unit_size_min=32, unit_size_max=128,
+                    holes_number_x=4, holes_number_y=4,
+                    shift_x=0, shift_y=0, random_offset=True,
+                    fill_value=0, p=1.0
+                ),
+            ], p=0.3),
+            
+            # Elastic and optical distortions
+            A.OneOf([
+                A.ElasticTransform(
+                    alpha=1, sigma=50, alpha_affine=50,
+                    interpolation=1, border_mode=4, value=None,
+                    mask_value=None, always_apply=False, approximate=False, p=1.0
+                ),
+                A.OpticalDistortion(
+                    distort_limit=0.2, shift_limit=0.15,
+                    interpolation=1, border_mode=4, value=None,
+                    mask_value=None, always_apply=False, p=1.0
+                ),
+            ], p=0.2),
+            
+            # Resize to target size
+            A.Resize(height=image_size, width=image_size, p=1.0),
+            
+            # Normalize
+            A.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225],
+                max_pixel_value=255.0,
+                p=1.0
+            ),
+        ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels']))
+        
+        # Create simpler augmentation for validation
+        self.validation_pipeline = A.Compose([
+            A.Resize(height=image_size, width=image_size, p=1.0),
+            A.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225],
+                max_pixel_value=255.0,
+                p=1.0
+            ),
+        ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels']))
+    
+    def augment(self, image: np.ndarray, bboxes: List[List[float]] = None, 
+                class_labels: List[int] = None, is_training: bool = True) -> Tuple[np.ndarray, List[List[float]], List[int]]:
+        """
+        Apply data augmentation to image and bounding boxes
         
         Args:
             image: Input image
-            bboxes: Bounding boxes in YOLO format [class, x_center, y_center, width, height]
+            bboxes: List of bounding boxes in YOLO format [x_center, y_center, width, height]
+            class_labels: List of class labels
+            is_training: Whether this is for training (True) or validation (False)
             
         Returns:
-            Augmented image and bounding boxes
+            Tuple of (augmented_image, augmented_bboxes, augmented_class_labels)
         """
+        # Prepare data for augmentation
         if bboxes is None:
             bboxes = []
+        if class_labels is None:
+            class_labels = []
         
-        # Convert YOLO format to Albumentations format
-        albumentations_bboxes = []
-        for bbox in bboxes:
-            if len(bbox) >= 4:
-                class_id, x_center, y_center, width, height = bbox[:4]
-                x_min = (x_center - width/2) * image.shape[1]
-                y_min = (y_center - height/2) * image.shape[0]
-                x_max = (x_center + width/2) * image.shape[1]
-                y_max = (y_center + height/2) * image.shape[0]
-                albumentations_bboxes.append([x_min, y_min, x_max, y_max, class_id])
+        # Choose pipeline based on training/validation
+        pipeline = self.augmentation_pipeline if is_training else self.validation_pipeline
         
         # Apply augmentation
-        if albumentations_bboxes:
-            transformed = self.transform(image=image, bboxes=albumentations_bboxes)
-            augmented_image = transformed['image']
-            augmented_bboxes = transformed['bboxes']
-            
-            # Convert back to YOLO format
-            yolo_bboxes = []
-            for bbox in augmented_bboxes:
-                x_min, y_min, x_max, y_max, class_id = bbox
-                x_center = (x_min + x_max) / 2 / augmented_image.shape[1]
-                y_center = (y_min + y_max) / 2 / augmented_image.shape[0]
-                width = (x_max - x_min) / augmented_image.shape[1]
-                height = (y_max - y_min) / augmented_image.shape[0]
-                yolo_bboxes.append([class_id, x_center, y_center, width, height])
-        else:
-            transformed = self.transform(image=image)
-            augmented_image = transformed['image']
-            yolo_bboxes = []
+        augmented = pipeline(
+            image=image,
+            bboxes=bboxes,
+            class_labels=class_labels
+        )
         
-        return augmented_image, yolo_bboxes
+        return (
+            augmented['image'],
+            augmented['bboxes'],
+            augmented['class_labels']
+        )
+    
+    def augment_batch(self, images: List[np.ndarray], bboxes_list: List[List[List[float]]] = None,
+                     class_labels_list: List[List[int]] = None, is_training: bool = True) -> Tuple[List[np.ndarray], List[List[List[float]]], List[List[int]]]:
+        """
+        Apply augmentation to a batch of images
+        
+        Args:
+            images: List of input images
+            bboxes_list: List of bounding box lists for each image
+            class_labels_list: List of class label lists for each image
+            is_training: Whether this is for training
+            
+        Returns:
+            Tuple of (augmented_images, augmented_bboxes_list, augmented_class_labels_list)
+        """
+        if bboxes_list is None:
+            bboxes_list = [[] for _ in images]
+        if class_labels_list is None:
+            class_labels_list = [[] for _ in images]
+        
+        augmented_images = []
+        augmented_bboxes = []
+        augmented_labels = []
+        
+        for image, bboxes, labels in zip(images, bboxes_list, class_labels_list):
+            aug_image, aug_bboxes, aug_labels = self.augment(
+                image, bboxes, labels, is_training
+            )
+            augmented_images.append(aug_image)
+            augmented_bboxes.append(aug_bboxes)
+            augmented_labels.append(aug_labels)
+        
+        return augmented_images, augmented_bboxes, augmented_labels
+    
+    def create_augmentation_samples(self, image: np.ndarray, bboxes: List[List[float]] = None,
+                                  class_labels: List[int] = None, num_samples: int = 5) -> List[Tuple[np.ndarray, List[List[float]], List[int]]]:
+        """
+        Create multiple augmented samples from a single image
+        
+        Args:
+            image: Input image
+            bboxes: Bounding boxes
+            class_labels: Class labels
+            num_samples: Number of augmented samples to create
+            
+        Returns:
+            List of (augmented_image, augmented_bboxes, augmented_class_labels) tuples
+        """
+        samples = []
+        for _ in range(num_samples):
+            sample = self.augment(image, bboxes, class_labels, is_training=True)
+            samples.append(sample)
+        
+        return samples
 
 class VisualizationUtils:
-    """Utilities for visualization"""
+    """Utility class for visualization functions"""
     
     @staticmethod
     def draw_detections(image: np.ndarray, detections: List[dict], 
                        class_names = None, 
                        confidence_threshold: float = 0.25) -> np.ndarray:
         """
-        Draw detection results on image with improved visualization
+        Draw detection results on image
+        
         Args:
             image: Input image
-            detections: List of detection dictionaries
-            class_names: Dict of class names (key: mã nhãn, value: tên không dấu)
+            detections: List of detection dictionaries with 'bbox', 'confidence', 'class_id'
+            class_names: List of class names
             confidence_threshold: Minimum confidence to display
+            
         Returns:
             Image with detections drawn
         """
+        # Create a copy of the image
         result_image = image.copy()
-        color_map = {
-            'speed_limit': (0, 255, 0),
-            'warning': (0, 165, 255),
-            'prohibition': (0, 0, 255),
-            'mandatory': (255, 0, 0),
-            'other': (128, 128, 128)
-        }
+        
+        # Define colors for different classes
+        colors = [
+            (255, 0, 0),    # Red
+            (0, 255, 0),    # Green
+            (0, 0, 255),    # Blue
+            (255, 255, 0),  # Yellow
+            (255, 0, 255),  # Magenta
+            (0, 255, 255),  # Cyan
+            (128, 0, 0),    # Dark Red
+            (0, 128, 0),    # Dark Green
+            (0, 0, 128),    # Dark Blue
+            (128, 128, 0),  # Olive
+            (128, 0, 128),  # Purple
+            (0, 128, 128),  # Teal
+        ]
+        
         for detection in detections:
             if detection['confidence'] < confidence_threshold:
                 continue
+                
             bbox = detection['bbox']
             class_id = detection['class_id']
             confidence = detection['confidence']
-            x1, y1, x2, y2 = map(int, bbox)
-            # Lấy tên lớp từ dict
-            if isinstance(class_names, dict):
-                class_name = class_names.get(class_id, f"Class {class_id}")
-            elif isinstance(class_names, list) and isinstance(class_id, int) and class_id < len(class_names):
+            
+            # Get color for this class
+            color = colors[class_id % len(colors)]
+            
+            # Convert bbox from [x_center, y_center, width, height] to [x1, y1, x2, y2]
+            x_center, y_center, width, height = bbox
+            x1 = int((x_center - width/2) * image.shape[1])
+            y1 = int((y_center - height/2) * image.shape[0])
+            x2 = int((x_center + width/2) * image.shape[1])
+            y2 = int((y_center + height/2) * image.shape[0])
+            
+            # Draw bounding box
+            cv2.rectangle(result_image, (x1, y1), (x2, y2), color, 2)
+            
+            # Prepare label text
+            if class_names and class_id < len(class_names):
                 class_name = class_names[class_id]
             else:
                 class_name = f"Class {class_id}"
-            color = color_map['other']
-            for category, c in color_map.items():
-                if category in class_name.lower():
-                    color = c
-                    break
-            thickness = max(1, int(3 * confidence))
-            cv2.rectangle(result_image, (x1, y1), (x2, y2), color, thickness)
+            
             label = f"{class_name}: {confidence:.2f}"
-            label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, thickness)[0]
-            cv2.rectangle(result_image, 
-                         (x1, y1 - label_size[1] - 10), 
-                         (x1 + label_size[0], y1),
-                         color, -1)
-            cv2.putText(result_image, label, 
-                       (x1, y1 - 5),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 
-                       thickness)
+            
+            # Draw label background
+            (label_width, label_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+            cv2.rectangle(result_image, (x1, y1 - label_height - 10), (x1 + label_width, y1), color, -1)
+            
+            # Draw label text
+            cv2.putText(result_image, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        
         return result_image
     
     @staticmethod
     def save_detection_result(image: np.ndarray, output_path: str, 
-                            filename: str, detections: List[dict] = None, class_names=None, class_names_vi=None):
+                           filename: str, detections: List[dict] = None, class_names=None, class_names_vi=None):
         """
-        Save detection result with metadata (JSON)
+        Save detection result with visualization
+        
         Args:
-            image: Image with drawn detections
-            output_path: Directory to save results
+            image: Input image
+            output_path: Output directory path
             filename: Output filename
-            detections: List of detection dictionaries
-            class_names: List hoặc Dict ánh xạ số -> mã nhãn
-            class_names_vi: Dict ánh xạ mã nhãn -> mô tả tiếng Việt
+            detections: List of detections
+            class_names: English class names
+            class_names_vi: Vietnamese class names
         """
-        images_dir = os.path.join(output_path, 'images')
-        json_dir = os.path.join(output_path, 'json')
-        os.makedirs(images_dir, exist_ok=True)
-        os.makedirs(json_dir, exist_ok=True)
-        image_path = os.path.join(images_dir, filename)
-        cv2.imwrite(image_path, image)
+        # Create output directory if it doesn't exist
+        os.makedirs(output_path, exist_ok=True)
+        
+        # Draw detections if provided
         if detections:
-            base_name = os.path.splitext(filename)[0]
-            metadata_path = os.path.join(json_dir, f"{base_name}_detections.json")
-            output_json = []
-            for det in detections:
-                class_id = det.get('class_id')
-                class_label = det.get('class_label')
-                class_label_vi = det.get('class_label_vi')
-                if class_label is None:
-                    if isinstance(class_names, list) and int(class_id) < len(class_names):
-                        class_label = class_names[int(class_id)]
+            result_image = VisualizationUtils.draw_detections(image, detections, class_names)
+        else:
+            result_image = image
+        
+        # Save the result image
+        output_file = os.path.join(output_path, filename)
+        cv2.imwrite(output_file, cv2.cvtColor(result_image, cv2.COLOR_RGB2BGR))
+        
+        # Save detection data as text file
+        if detections:
+            txt_filename = filename.replace('.jpg', '.txt').replace('.png', '.txt')
+            txt_file = os.path.join(output_path, txt_filename)
+            
+            with open(txt_file, 'w', encoding='utf-8') as f:
+                for detection in detections:
+                    bbox = detection['bbox']
+                    class_id = detection['class_id']
+                    confidence = detection['confidence']
+                    
+                    # Get class name
+                    if class_names_vi and class_id < len(class_names_vi):
+                        class_name = class_names_vi[class_id]
+                    elif class_names and class_id < len(class_names):
+                        class_name = class_names[class_id]
                     else:
-                        class_label = str(class_id)
-                if class_label_vi is None:
-                    class_label_vi = class_label
-                output_json.append({
-                    "class_id": class_id,
-                    "class_label": class_label,
-                    "class_label_vi": class_label_vi,
-                    "confidence": det['confidence'],
-                    "bbox": det['bbox']
-                })
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                json.dump(output_json, f, ensure_ascii=False, indent=2)
+                        class_name = f"Class_{class_id}"
+                    
+                    # Write detection info
+                    f.write(f"Class: {class_name}, Confidence: {confidence:.3f}, BBox: {bbox}\n")
 
 class FileUtils:
-    """Utilities for file operations"""
+    """Utility class for file operations"""
     
     @staticmethod
     def get_image_files(directory: str, extensions: List[str] = None) -> List[str]:
         """
-        Get all image files in a directory
+        Get all image files from directory
         
         Args:
-            directory: Directory to search
-            extensions: List of valid extensions (default: ['.jpg', '.jpeg', '.png'])
+            directory: Directory path
+            extensions: List of file extensions to include
             
         Returns:
             List of image file paths
         """
         if extensions is None:
             extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']
-            
-        image_files = []
-        for ext in extensions:
-            image_files.extend(Path(directory).glob(f"*{ext}"))
-            image_files.extend(Path(directory).glob(f"*{ext.upper()}"))
         
-        return [str(f) for f in sorted(image_files)]
+        image_files = []
+        for filename in os.listdir(directory):
+            if any(filename.lower().endswith(ext) for ext in extensions):
+                image_files.append(os.path.join(directory, filename))
+        
+        return sorted(image_files)
     
     @staticmethod
     def create_dataset_yaml(dataset_path: str, output_path: str = "dataset.yaml"):
         """
-        Create dataset.yaml file
+        Create YAML configuration file for dataset
         
         Args:
-            dataset_path: Path to dataset
-            output_path: Output yaml file path
+            dataset_path: Path to dataset directory
+            output_path: Output YAML file path
         """
-        yaml_content = f"""# Dataset configuration
-path: {os.path.abspath(dataset_path)}
-train: images/train
-val: images/val
-
-# Number of classes
-nc: 43  # Adjust based on your traffic sign classes
-
-# Class names (example - adjust based on your dataset)
-names:
-  Đường người đi bộ cắt ngang
-Đường giao nhau (ngã ba bên phải)
-Cấm đi ngược chiều
-Phải đi vòng sang bên phải
-Giao nhau với đường đồng cấp
-Giao nhau với đường không ưu tiên
-Chỗ ngoặt nguy hiểm vòng bên trái
-Cấm rẽ trái
-Bến xe buýt
-Nơi giao nhau chạy theo vòng xuyến
-Cấm dừng và đỗ xe
-Chỗ quay xe
-Biển gộp làn đường theo phương tiện
-Đi chậm
-Cấm xe tải
-Đường bị thu hẹp về phía phải
-Giới hạn chiều cao
-Cấm quay đầu
-Cấm ô tô khách và ô tô tải
-Cấm rẽ phải và quay đầu
-Cấm ô tô
-Đường bị thu hẹp về phía trái
-Gồ giảm tốc phía trước
-Cấm xe hai và ba bánh
-Kiểm tra
-Chỉ dành cho xe máy*
-Chướng ngoại vật phía trước
-Trẻ em
-Xe tải và xe công*
-Cấm mô tô và xe máy
-Chỉ dành cho xe tải*
-Đường có camera giám sát
-Cấm rẽ phải
-Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang phải
-Cấm xe sơ-mi rơ-moóc
-Cấm rẽ trái và phải
-Cấm đi thẳng và rẽ phải
-Đường giao nhau (ngã ba bên trái)
-Giới hạn tốc độ (50km/h)
-Giới hạn tốc độ (60km/h)
-Giới hạn tốc độ (80km/h)
-Giới hạn tốc độ (40km/h)
-Các xe chỉ được rẽ trái
-Chiều cao tĩnh không thực tế
-Nguy hiểm khác
-Đường một chiều
-Cấm đỗ xe
-Cấm ô tô quay đầu xe (được rẽ trái)
-Giao nhau với đường sắt có rào chắn
-Cấm rẽ trái và quay đầu xe
-Chỗ ngoặt nguy hiểm vòng bên phải
-Chú ý chướng ngại vật – vòng tránh sang bên phải
-"""
+        # Define dataset structure
+        dataset_config = {
+            'path': dataset_path,
+            'train': 'images/train',
+            'val': 'images/val',
+            'test': 'images/test',
+            'nc': 12,  # Number of classes
+            'names': [
+                'i.423.b', 'p.102', 'p.106.b', 'p.130', 'p.131.a',
+                'r.308.b', 'sus', 'w.201.a', 'w.203.c', 'w.207.b',
+                'w.207.c', 'w.209'
+            ]
+        }
         
-        with open(output_path, 'w') as f:
-            f.write(yaml_content)
+        # Write YAML file
+        with open(output_path, 'w', encoding='utf-8') as f:
+            yaml.dump(dataset_config, f, default_flow_style=False, allow_unicode=True)
         
-        print(f"Created dataset.yaml at: {output_path}")
+        print(f"Dataset YAML created: {output_path}")
 
 def to_ascii_label(s):
-    s = unicodedata.normalize('NFD', s)
-    s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
-    s = s.replace(' ', '_')
-    return s 
+    """Convert string to ASCII-safe label"""
+    return ''.join(c for c in s if c.isalnum() or c in (' ', '-', '_')).rstrip() 
