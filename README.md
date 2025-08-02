@@ -1,6 +1,12 @@
 <h1 align="center">Vietnam Traffic Sign Detection</h1>
 <h3 align="center">Our first Machine Learning, Deep Learning, and Computer Vision Project</h3>
 
+<div align="center">
+  <a href="https://hoanbucon.id.vn" target="_blank">
+    <img src="peak_traffic_sign_detection.png" alt="Preview" />
+  </a>
+</div>
+
 <hr>
 
 <!-- LƯU Ý: Nếu có &#x26; thì phải sửa thành & -->
