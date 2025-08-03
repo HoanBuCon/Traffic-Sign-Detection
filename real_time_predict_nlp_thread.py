@@ -16,6 +16,7 @@ import torchvision.transforms as T
 from transformers import AutoModel, AutoTokenizer
 import threading
 import queue
+import hashlib
 
 project_root = os.path.abspath(os.path.dirname(__file__))
 if project_root not in sys.path:
@@ -100,69 +101,26 @@ def remove_vietnamese_diacritics(text):
     text = text.replace('__', '_')
     return text
 
-descriptions_vi = [
-    "Đường người đi bộ cắt ngang",
-    "Đường giao nhau (ngã ba bên phải)",
-    "Cấm đi ngược chiều",
-    "Phải đi vòng sang bên phải",
-    "Giao nhau với đường đồng cấp",
-    "Giao nhau với đường không ưu tiên",
-    "Chỗ ngoặt nguy hiểm vòng bên trái",
-    "Cấm rẽ trái",
-    "Bến xe buýt",
-    "Nơi giao nhau chạy theo vòng xuyến",
-    "Cấm dừng và đỗ xe",
-    "Chỗ quay xe",
-    "Biển gộp làn đường theo phương tiện",
-    "Đi chậm",
-    "Cấm xe tải",
-    "Đường bị thu hẹp về phía phải",
-    "Giới hạn chiều cao",
-    "Cấm quay đầu",
-    "Cấm ô tô khách và ô tô tải",
-    "Cấm rẽ phải và quay đầu",
-    "Cấm ô tô",
-    "Đường bị thu hẹp về phía trái",
-    "Gồ giảm tốc phía trước",
-    "Cấm xe hai và ba bánh",
-    "Kiểm tra",
-    "Chỉ dành cho xe máy*",
-    "Chướng ngoại vật phía trước",
-    "Trẻ em",
-    "Xe tải và xe công*",
-    "Cấm mô tô và xe máy",
-    "Chỉ dành cho xe tải*",
-    "Đường có camera giám sát",
-    "Cấm rẽ phải",
-    "Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang phải",
-    "Cấm xe sơ-mi rơ-moóc",
-    "Cấm rẽ trái và phải",
-    "Cấm đi thẳng và rẽ phải",
-    "Đường giao nhau (ngã ba bên trái)",
-    "Giới hạn tốc độ (50km/h)",
-    "Giới hạn tốc độ (60km/h)",
-    "Giới hạn tốc độ (80km/h)",
-    "Giới hạn tốc độ (40km/h)",
-    "Các xe chỉ được rẽ trái",
-    "Chiều cao tĩnh không thực tế",
-    "Nguy hiểm khác",
-    "Đường một chiều",
-    "Cấm đỗ xe",
-    "Cấm ô tô quay đầu xe (được rẽ trái)",
-    "Giao nhau với đường sắt có rào chắn",
-    "Cấm rẽ trái và quay đầu xe",
-    "Chỗ ngoặt nguy hiểm vòng bên phải",
-    "Chú ý chướng ngại vật – vòng tránh sang bên phải"
-]
-descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
+# Load descriptions từ data.yaml
+def load_descriptions_from_yaml(yaml_path='data.yaml'):
+    """Load descriptions từ file data.yaml"""
+    try:
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            data_yaml = yaml.safe_load(f)
+            descriptions = data_yaml.get('descriptions', [])
+            if not descriptions:
+                print(f"[WARNING] No descriptions found in {yaml_path}")
+                return []
+            else:
+                print(f"[INFO] Loaded {len(descriptions)} descriptions from {yaml_path}")
+            return descriptions
+    except Exception as e:
+        print(f"[ERROR] Failed to load descriptions from {yaml_path}: {e}")
+        return []
 
-class_ids = [
-    "W.301", "W.302a", "P.101a", "P.123a", "W.207", "W.208", "W.212b", "P.124a", "S.507", "W.224", "P.131a",
-    "S.407", "R.411", "P.135", "P.106a", "W.233a", "P.117a", "P.125", "P.108", "P.124b", "P.102", "W.233b",
-    "W.235", "P.109", "S.501", "R.412", "R.412a", "W.211", "W.210", "P.106b", "P.111b", "R.413", "S.510",
-    "P.124c", "W.212a", "P.111a", "P.132", "P.134", "W.302b", "P.127", "P.128", "P.129", "P.126", "R.407",
-    "P.117b", "W.245", "R.407a", "P.130", "P.131b", "P.110", "W.222", "P.124d", "W.212c", "W.212d", "W.212e"
-]
+# Load descriptions từ data.yaml
+descriptions_vi = load_descriptions_from_yaml()
+descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
 
 def bbox_iou(box1, box2):
     b1_x1, b1_y1, b1_x2, b1_y2 = box1
@@ -203,14 +161,12 @@ class RealTimeTrafficSignDetectorNLPThread:
         self.ocr_queue = queue.Queue()
         self.ocr_cache = {}
         self.ocr_queue_sent = set()
+        self.ocr_bbox_cache = {}  # Cache để lưu bbox cuối cùng của mỗi object
+        self.ocr_image_hash_cache = {}  # Cache để lưu hash của ảnh đã OCR
+        self.ocr_timestamp_cache = {}  # Cache timestamp để hết hạn
         self.label_buffers = {}
         self.buffer_size = 10
-        self.TARGET_CLASSES_FOR_NLP = [
-            "Bien_gop_lan_duong_theo_phuong_tien",
-            "Nguy_hiem_khac",
-            "Chieu_cao_tinh_khong_thuc_te",
-            "Cam_o_to_quay_dau_xe_(duoc_re_trai)"
-        ]
+        self.ocr_cache_timeout = 30.0  # Cache timeout 30 giây
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print("[DEBUG] Before load Vintern NLP model")
         self._load_nlp_model()
@@ -235,16 +191,103 @@ class RealTimeTrafficSignDetectorNLPThread:
             self.vintern_model = None
             self.vintern_tokenizer = None
 
+    def _compute_image_hash(self, image: np.ndarray) -> str:
+        """Tính hash của ảnh để xác định nội dung duy nhất"""
+        try:
+            # Resize ảnh về kích thước cố định để tránh ảnh hưởng của scale
+            resized = cv2.resize(image, (64, 64))
+            # Chuyển sang grayscale để giảm ảnh hưởng của màu sắc
+            gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+            # Tính hash MD5
+            img_hash = hashlib.md5(gray.tobytes()).hexdigest()
+            return img_hash
+        except Exception as e:
+            print(f"[ERROR] Không thể tính hash ảnh: {e}")
+            return ""
+
+    def _is_cache_valid(self, object_id: int, current_bbox: list, image_hash: str) -> bool:
+        """Kiểm tra cache có còn hợp lệ không"""
+        current_time = time.time()
+        
+        # Kiểm tra timeout
+        if object_id in self.ocr_timestamp_cache:
+            if current_time - self.ocr_timestamp_cache[object_id] > self.ocr_cache_timeout:
+                return False
+        
+        # Kiểm tra bbox thay đổi
+        if object_id in self.ocr_bbox_cache:
+            old_bbox = self.ocr_bbox_cache[object_id]
+            iou_bbox = bbox_iou(current_bbox, old_bbox)
+            if iou_bbox < 0.7:
+                return False
+        
+        # Kiểm tra nội dung ảnh thay đổi (quan trọng nhất)
+        if object_id in self.ocr_image_hash_cache:
+            old_hash = self.ocr_image_hash_cache[object_id]
+            if old_hash != image_hash:
+                return False
+        
+        return True
+
+    def _clear_object_cache(self, object_id: int):
+        """Xóa toàn bộ cache của một object"""
+        caches_to_clear = [
+            self.ocr_cache,
+            self.ocr_bbox_cache, 
+            self.ocr_image_hash_cache,
+            self.ocr_timestamp_cache
+        ]
+        
+        for cache_dict in caches_to_clear:
+            if object_id in cache_dict:
+                del cache_dict[object_id]
+        
+        self.ocr_queue_sent.discard((object_id, ))
+
+    def _update_object_cache(self, object_id: int, bbox: list, image_hash: str, ocr_result: str = None):
+        """Cập nhật cache cho object"""
+        current_time = time.time()
+        self.ocr_bbox_cache[object_id] = bbox
+        self.ocr_image_hash_cache[object_id] = image_hash
+        self.ocr_timestamp_cache[object_id] = current_time
+        
+        if ocr_result is not None:
+            self.ocr_cache[object_id] = ocr_result
+
+    def _cleanup_expired_cache(self):
+        """Dọn dẹp cache hết hạn"""
+        current_time = time.time()
+        expired_objects = []
+        
+        for object_id, timestamp in self.ocr_timestamp_cache.items():
+            if current_time - timestamp > self.ocr_cache_timeout:
+                expired_objects.append(object_id)
+        
+        for object_id in expired_objects:
+            self._clear_object_cache(object_id)
+
     def ocr_worker(self):
         while True:
             object_id, sign_crop = self.ocr_queue.get()
             try:
+                # Tính hash của ảnh để đảm bảo tính nhất quán
+                image_hash = self._compute_image_hash(sign_crop)
+                
+                # Kiểm tra xem object_id có còn hợp lệ không
+                if object_id in self.ocr_image_hash_cache:
+                    cached_hash = self.ocr_image_hash_cache[object_id]
+                    if cached_hash != image_hash:
+                        continue  # Skip OCR nếu hash không khớp
+                
                 ocr_text = self._get_text_from_sign(sign_crop)
-                if ocr_text:
+                if ocr_text and len(ocr_text.strip()) > 0:
+                    # Cập nhật cache với kết quả OCR
                     self.ocr_cache[object_id] = ocr_text
+                    print(f"[OCR DEBUG] Cached OCR result for object {object_id}: {ocr_text}")
             except Exception as e:
                 print(f"[ERROR] OCR thread: {e}")
-            self.ocr_queue.task_done()
+            finally:
+                self.ocr_queue.task_done()
 
     def _get_text_from_sign(self, sign_image: np.ndarray) -> str:
         if self.vintern_model is None or self.vintern_tokenizer is None:
@@ -252,12 +295,54 @@ class RealTimeTrafficSignDetectorNLPThread:
         try:
             pil_image = Image.fromarray(cv2.cvtColor(sign_image, cv2.COLOR_BGR2RGB))
             pixel_values = load_image_for_vintern(pil_image, input_size=448, max_num=4).to(torch.float16).to(self.device)
-            generation_config = dict(max_new_tokens=128, do_sample=False, num_beams=3, repetition_penalty=1.5, pad_token_id=self.vintern_tokenizer.eos_token_id)
-            question = "<image>\nChỉ trả về nội dung chữ trên biển báo, không giải thích gì thêm."
+            generation_config = dict(max_new_tokens=200, do_sample=False, num_beams=3, repetition_penalty=1.3, pad_token_id=self.vintern_tokenizer.eos_token_id)
+            
+            # Prompt tối ưu để đọc được cả chữ và hướng mũi tên theo cách tự nhiên
+            question = """<image>
+            Bạn là trợ lý GPS. Hãy đọc biển báo và thông báo cho người lái xe:
+
+            • Biển báo có những hướng đi nào theo mũi tên ? (đi thẳng / rẽ trái / rẽ phải)
+            • Ở mỗi hướng đó, biển báo ghi đến địa điểm nào ? Khoảng cách bao nhiêu ?
+
+            Yêu cầu:
+            - Chỉ nói các hướng có mũi tên thật sự được ghi trên biển.
+            - Ghi rõ: Hướng - Địa điểm - Khoảng cách (nếu có).
+            - Mỗi hướng một dòng, ngắn gọn.
+            """
+            
             response, history = self.vintern_model.chat(self.vintern_tokenizer, pixel_values, question, generation_config, history=None, return_history=True)
-            response = response.strip().split('\n')[0]
-            response = response.replace('**', '').replace('`', '').strip()
-            return response
+            
+            # Xử lý response để giữ lại thông tin quan trọng
+            response = response.strip()
+            response = response.replace('**', '').replace('`', '').replace('*', '')
+            
+            # Tách các dòng và lọc thông tin hữu ích
+            all_lines = []
+            for line in response.split('\n'):
+                line = line.strip()
+                if line and len(line) >= 3 and len(line) <= 120:
+                    # Loại bỏ các dòng mô tả không cần thiết
+                    if not any(skip in line.lower() for skip in [
+                        'biển báo', 'hình ảnh', 'theo thứ tự', 'liệt kê', 'đọc được',
+                        'nhìn thấy', 'có thể thấy', 'xuất hiện', 'tôi thấy', 'dựa vào'
+                    ]):
+                        # Làm sạch dòng
+                        clean_line = line.lstrip('- ').lstrip('• ').lstrip('1234567890. ').strip()
+                        if clean_line and len(clean_line) >= 2:
+                            all_lines.append(clean_line)
+            
+            # Kết hợp các dòng bằng " | "
+            if all_lines:
+                result = ' | '.join(all_lines[:4])  # Lấy tối đa 4 dòng đầu tiên
+                print(f"[OCR DEBUG] Found {len(all_lines)} valid lines: {result}")
+                return result
+            else:
+                # Fallback: lấy response gốc và làm sạch
+                fallback = response.replace('\n', ' ').strip()
+                if len(fallback) > 200:
+                    fallback = fallback[:200] + "..."
+                return fallback
+                
         except Exception as e:
             print(f"[ERROR] Lỗi khi xử lý OCR Vintern: {e}")
             return ""
@@ -267,10 +352,18 @@ class RealTimeTrafficSignDetectorNLPThread:
             self.label_buffers[object_id] = deque(maxlen=self.buffer_size)
         if confidence >= self.config.CONFIDENCE_THRESHOLD - 0.1:
             self.label_buffers[object_id].append(class_idx)
+        
+        # Làm sạch cache cho các object đã biến mất
         current_track_ids = set(trk.id for trk in self.tracker.trackers)
         for obj_id in list(self.label_buffers.keys()):
             if obj_id not in current_track_ids:
                 del self.label_buffers[obj_id]
+                # Xóa toàn bộ cache liên quan đến object này
+                self._clear_object_cache(obj_id)
+        
+        # Dọn dẹp cache hết hạn
+        self._cleanup_expired_cache()
+        
         most_common = Counter(self.label_buffers.get(object_id, [])).most_common(1)
         return most_common[0][0] if most_common else class_idx
 
@@ -325,7 +418,6 @@ class RealTimeTrafficSignDetectorNLPThread:
             class_idx_smooth = self.smooth_label(class_idx, object_id, confidence)
             class_label = self.class_names[class_idx_smooth] if isinstance(self.class_names, list) and class_idx_smooth < len(self.class_names) else str(class_idx_smooth)
             class_label_vi = descriptions_vi_no_diacritics[class_idx_smooth] if class_idx_smooth < len(descriptions_vi_no_diacritics) else class_label
-            class_id_code = class_ids[class_idx_smooth] if class_idx_smooth < len(class_ids) else str(class_idx_smooth)
             detection = {
                 'object_id': object_id,
                 'bbox': [x1, y1, x2, y2],
@@ -333,24 +425,51 @@ class RealTimeTrafficSignDetectorNLPThread:
                 'class_id': class_idx_smooth,
                 'class_label': class_label,
                 'class_label_vi': class_label_vi,
-                'class_id_code': class_id_code,
                 'ocr_text': None
             }
-            if class_label_vi in self.TARGET_CLASSES_FOR_NLP:
+            if class_label == "sus":
                 padding = 5
                 crop_x1 = max(0, x1 - padding)
                 crop_y1 = max(0, y1 - padding)
                 crop_x2 = min(frame.shape[1], x2 + padding)
                 crop_y2 = min(frame.shape[0], y2 + padding)
-                if object_id in self.ocr_cache:
+                
+                # Kiểm tra crop hợp lệ
+                if crop_y2 <= crop_y1 or crop_x2 <= crop_x1:
+                    detection['ocr_text'] = "Invalid crop"
+                    detections.append(detection)
+                    continue
+                
+                current_bbox = [crop_x1, crop_y1, crop_x2, crop_y2]
+                sign_crop = frame[crop_y1:crop_y2, crop_x1:crop_x2]
+                
+                # Tính hash của ảnh crop để xác định nội dung
+                image_hash = self._compute_image_hash(sign_crop)
+                if not image_hash:
+                    detection['ocr_text'] = "Hash error"
+                    detections.append(detection)
+                    continue
+                
+                # Kiểm tra cache có còn hợp lệ không
+                cache_valid = self._is_cache_valid(object_id, current_bbox, image_hash)
+                
+                if cache_valid and object_id in self.ocr_cache:
+                    # Sử dụng cache hợp lệ
                     detection['ocr_text'] = self.ocr_cache[object_id]
                 else:
+                    # Cache không hợp lệ hoặc không tồn tại
+                    if not cache_valid:
+                        self._clear_object_cache(object_id)
+                    
+                    # Cập nhật cache với thông tin mới
+                    self._update_object_cache(object_id, current_bbox, image_hash)
+                    
+                    # Gửi tới OCR queue nếu chưa gửi
                     if (object_id, ) not in self.ocr_queue_sent:
-                        if crop_y2 > crop_y1 and crop_x2 > crop_x1:
-                            sign_crop = frame[crop_y1:crop_y2, crop_x1:crop_x2]
-                            self.ocr_queue.put((object_id, sign_crop.copy()))
-                            self.ocr_queue_sent.add((object_id, ))
-                    detection['ocr_text'] = "..."
+                        self.ocr_queue.put((object_id, sign_crop.copy()))
+                        self.ocr_queue_sent.add((object_id, ))
+                    
+                    detection['ocr_text'] = "⏳ Processing..."
             detections.append(detection)
         return detections
 
@@ -372,12 +491,25 @@ class RealTimeTrafficSignDetectorNLPThread:
             font = ImageFont.load_default()
         for det in detections:
             x1, y1, x2, y2 = map(int, det['bbox'])
-            label = f"ID:{det['object_id']} | {det['class_id_code']} | {det['class_label_vi']} | {det['confidence']:.2f}"
+            # Lấy mã biển báo từ class_names thay vì dùng class_id_code hardcode
+            class_code = det['class_label'] if 'class_label' in det else f"Class_{det['class_id']}"
+            description_no_diacritics = det['class_label_vi'] if 'class_label_vi' in det else class_code
+            confidence = det['confidence']
+            
+            # Format: Mã biển | Description_tieng_viet_khong_dai | Độ tin cậy
+            label = f"{class_code} | {description_no_diacritics} | {confidence:.1%}"
             draw.text((x1, y1 - 25), label, font=font, fill=(0,255,0))
-            if det.get('ocr_text'):
+            
+            # Chỉ hiển thị OCR khi có kết quả thành công (không phải "..." hay "⏳ Processing...")
+            if (det.get('ocr_text') and 
+                det['ocr_text'] != "..." and 
+                det['ocr_text'] != "⏳ Processing..." and
+                not det['ocr_text'].startswith("Invalid") and
+                not det['ocr_text'].startswith("Hash error") and
+                len(det['ocr_text'].strip()) > 0):
                 ocr_label = f"OCR: {det['ocr_text']}"
                 draw.text((x1, y2 + 5), ocr_label, font=font, fill=(255,255,255))
-                print(f"{det['object_id']} | {det['class_id_code']} | {det['class_label_vi']} | {det['ocr_text']}")
+                print(f"{class_code} | {description_no_diacritics} | {det['ocr_text']}")
         frame_show = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
         cv2.imshow('Traffic Sign Detection - SORT Smoothing', frame_show)
 

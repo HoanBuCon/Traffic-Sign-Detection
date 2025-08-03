@@ -256,44 +256,97 @@ class VisualizationUtils:
             Image with detections drawn
         """
         result_image = image.copy()
+        
+        # Màu sắc cho các loại biển báo
         color_map = {
-            'speed_limit': (0, 255, 0),
-            'warning': (0, 165, 255),
-            'prohibition': (0, 0, 255),
-            'mandatory': (255, 0, 0),
-            'other': (128, 128, 128)
+            'cam': (0, 0, 255),      # Đỏ cho biển cấm
+            'canh_bao': (0, 165, 255), # Cam cho biển cảnh báo  
+            'duong': (0, 255, 0),     # Xanh lá cho biển đường
+            'other': (255, 0, 255)    # Tím cho khác
         }
+        
         for detection in detections:
             if detection['confidence'] < confidence_threshold:
                 continue
+                
             bbox = detection['bbox']
             class_id = detection['class_id']
             confidence = detection['confidence']
             x1, y1, x2, y2 = map(int, bbox)
-            # Lấy tên lớp từ dict
-            if isinstance(class_names, dict):
-                class_name = class_names.get(class_id, f"Class {class_id}")
-            elif isinstance(class_names, list) and isinstance(class_id, int) and class_id < len(class_names):
-                class_name = class_names[class_id]
+            
+            # Lấy mã biển báo (class code) thay vì class_id số
+            if 'class_label' in detection:
+                class_code = detection['class_label']  # Mã biển như w.201.a, p.102, etc.
             else:
-                class_name = f"Class {class_id}"
+                # Fallback nếu không có class_label
+                if isinstance(class_names, dict):
+                    class_code = class_names.get(class_id, f"Class_{class_id}")
+                elif isinstance(class_names, list) and isinstance(class_id, int) and class_id < len(class_names):
+                    class_code = class_names[class_id]
+                else:
+                    class_code = f"Class_{class_id}"
+            
+            # Sử dụng class_label_vi nếu có, nếu không thì dùng class_label
+            if 'class_label_vi_filename' in detection and detection['class_label_vi_filename']:
+                # Sử dụng description không dấu cho hiển thị
+                description_no_diacritics = detection['class_label_vi_filename']
+            elif 'class_label_vi' in detection and detection['class_label_vi']:
+                # Nếu không có filename version, tạo từ display version
+                description_no_diacritics = detection['class_label_vi'].replace(' ', '_').replace('đ', 'd').replace('Đ', 'D')
+            elif 'class_label' in detection:
+                description_no_diacritics = detection['class_label']
+            else:
+                description_no_diacritics = class_code
+            
+            # Chọn màu dựa trên loại biển báo
             color = color_map['other']
-            for category, c in color_map.items():
-                if category in class_name.lower():
-                    color = c
-                    break
-            thickness = max(1, int(3 * confidence))
+            description_lower = description_no_diacritics.lower()
+            if 'cam' in description_lower:
+                color = color_map['cam']
+            elif 'canh_bao' in description_lower or 'cảnh báo' in description_lower:
+                color = color_map['canh_bao']
+            elif 'duong' in description_lower or 'đường' in description_lower:
+                color = color_map['duong']
+            
+            # Tăng độ dày của bounding box
+            thickness = max(2, int(4 * confidence))
             cv2.rectangle(result_image, (x1, y1), (x2, y2), color, thickness)
-            label = f"{class_name}: {confidence:.2f}"
-            label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, thickness)[0]
-            cv2.rectangle(result_image, 
-                         (x1, y1 - label_size[1] - 10), 
-                         (x1 + label_size[0], y1),
-                         color, -1)
+            
+            # Tạo label theo format: "Mã biển | Description_tieng_viet_khong_dai | Độ tin cậy"
+            label = f"{class_code} | {description_no_diacritics} | {confidence:.1%}"
+            
+            # Tăng font scale và thickness cho text
+            font_scale = 0.8  # Tăng từ 0.5 lên 0.8
+            text_thickness = 2
+            
+            # Tính kích thước text
+            (text_width, text_height), baseline = cv2.getTextSize(
+                label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_thickness)
+            
+            # Vẽ background cho text với padding lớn hơn
+            padding = 8
+            bg_y1 = y1 - text_height - padding * 2
+            bg_y2 = y1
+            bg_x1 = x1
+            bg_x2 = x1 + text_width + padding
+            
+            # Đảm bảo background không bị tràn ra ngoài ảnh
+            if bg_y1 < 0:
+                bg_y1 = y2
+                bg_y2 = y2 + text_height + padding * 2
+            
+            # Vẽ background với độ trong suốt
+            overlay = result_image.copy()
+            cv2.rectangle(overlay, (bg_x1, bg_y1), (bg_x2, bg_y2), color, -1)
+            cv2.addWeighted(overlay, 0.8, result_image, 0.2, 0, result_image)
+            
+            # Vẽ text chính
+            text_y = bg_y1 + text_height + padding//2 if bg_y1 < y1 else bg_y1 + text_height + padding//2
             cv2.putText(result_image, label, 
-                       (x1, y1 - 5),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 
-                       thickness)
+                       (x1 + padding//2, text_y),
+                       cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 
+                       text_thickness, cv2.LINE_AA)
+                       
         return result_image
     
     @staticmethod

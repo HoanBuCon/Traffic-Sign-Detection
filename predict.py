@@ -27,61 +27,34 @@ def get_new_predict_dir(base_dir="output"):
             return predict_dir
         i += 1
 
-# Thêm ánh xạ mã nhãn sang mô tả tiếng Việt
-descriptions_vi = [
-    "Đường người đi bộ cắt ngang",
-    "Đường giao nhau (ngã ba bên phải)",
-    "Cấm đi ngược chiều",
-    "Phải đi vòng sang bên phải",
-    "Giao nhau với đường đồng cấp",
-    "Giao nhau với đường không ưu tiên",
-    "Chỗ ngoặt nguy hiểm vòng bên trái",
-    "Cấm rẽ trái",
-    "Bến xe buýt",
-    "Nơi giao nhau chạy theo vòng xuyến",
-    "Cấm dừng và đỗ xe",
-    "Chỗ quay xe",
-    "Biển gộp làn đường theo phương tiện",
-    "Đi chậm",
-    "Cấm xe tải",
-    "Đường bị thu hẹp về phía phải",
-    "Giới hạn chiều cao",
-    "Cấm quay đầu",
-    "Cấm ô tô khách và ô tô tải",
-    "Cấm rẽ phải và quay đầu",
-    "Cấm ô tô",
-    "Đường bị thu hẹp về phía trái",
-    "Gồ giảm tốc phía trước",
-    "Cấm xe hai và ba bánh",
-    "Kiểm tra",
-    "Chỉ dành cho xe máy*",
-    "Chướng ngoại vật phía trước",
-    "Trẻ em",
-    "Xe tải và xe công*",
-    "Cấm mô tô và xe máy",
-    "Chỉ dành cho xe tải*",
-    "Đường có camera giám sát",
-    "Cấm rẽ phải",
-    "Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang phải",
-    "Cấm xe sơ-mi rơ-moóc",
-    "Cấm rẽ trái và phải",
-    "Cấm đi thẳng và rẽ phải",
-    "Đường giao nhau (ngã ba bên trái)",
-    "Giới hạn tốc độ (50km/h)",
-    "Giới hạn tốc độ (60km/h)",
-    "Giới hạn tốc độ (80km/h)",
-    "Giới hạn tốc độ (40km/h)",
-    "Các xe chỉ được rẽ trái",
-    "Chiều cao tĩnh không thực tế",
-    "Nguy hiểm khác",
-    "Đường một chiều",
-    "Cấm đỗ xe",
-    "Cấm ô tô quay đầu xe (được rẽ trái)",
-    "Giao nhau với đường sắt có rào chắn",
-    "Cấm rẽ trái và quay đầu xe",
-    "Chỗ ngoặt nguy hiểm vòng bên phải",
-    "Chú ý chướng ngại vật – vòng tránh sang bên phải"
-]
+# Khởi tạo biến toàn cục để lưu descriptions từ data.yaml
+descriptions_vi = []
+
+def load_descriptions_from_yaml(yaml_path='data.yaml'):
+    """
+    Load descriptions từ file data.yaml
+    
+    Args:
+        yaml_path: Đường dẫn đến file data.yaml
+        
+    Returns:
+        List descriptions tiếng Việt
+    """
+    global descriptions_vi
+    try:
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            data_yaml = yaml.safe_load(f)
+            descriptions_vi = data_yaml.get('descriptions', [])
+            if not descriptions_vi:
+                print(f"[WARNING] No descriptions found in {yaml_path}, using empty list")
+                descriptions_vi = []
+            else:
+                print(f"[INFO] Loaded {len(descriptions_vi)} descriptions from {yaml_path}")
+        return descriptions_vi
+    except Exception as e:
+        print(f"[ERROR] Failed to load descriptions from {yaml_path}: {e}")
+        descriptions_vi = []
+        return descriptions_vi
 
 def remove_vietnamese_diacritics(text):
     text = unicodedata.normalize('NFD', text)
@@ -98,7 +71,17 @@ def remove_vietnamese_diacritics(text):
     text = text.replace('__', '_')
     return text
 
-descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
+def get_descriptions_no_diacritics():
+    """
+    Tạo descriptions không dấu từ descriptions_vi
+    
+    Returns:
+        List descriptions không dấu
+    """
+    global descriptions_vi
+    if not descriptions_vi:
+        return []
+    return [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
 
 # Tạo dict ánh xạ mã nhãn -> mô tả tiếng Việt
 def get_class_names_vi(class_names):
@@ -145,6 +128,10 @@ class TrafficSignDetector:
         with open(data_yaml_path, 'r', encoding='utf-8') as f:
             data_yaml = yaml.safe_load(f)
             self.class_names = data_yaml.get('names', {})
+            
+        # Load descriptions từ data.yaml
+        load_descriptions_from_yaml(data_yaml_path)
+        self.descriptions_vi_no_diacritics = get_descriptions_no_diacritics()
         
     def enhance_image_for_inference(self, image: np.ndarray) -> np.ndarray:
         """
@@ -214,13 +201,19 @@ class TrafficSignDetector:
             for box in boxes:
                 class_idx = int(box.cls)
                 class_label = self.class_names[class_idx] if isinstance(self.class_names, list) and class_idx < len(self.class_names) else str(class_idx)
-                class_label_vi = descriptions_vi_no_diacritics[class_idx] if class_idx < len(descriptions_vi_no_diacritics) else class_label
+                
+                # Sử dụng description có dấu cho hiển thị và không dấu cho lưu file
+                global descriptions_vi
+                class_label_vi_display = descriptions_vi[class_idx] if class_idx < len(descriptions_vi) else class_label
+                class_label_vi_filename = self.descriptions_vi_no_diacritics[class_idx] if class_idx < len(self.descriptions_vi_no_diacritics) else class_label
+                
                 detection = {
                     'bbox': box.xyxy[0].tolist(),
                     'confidence': float(box.conf),
                     'class_id': class_idx,
                     'class_label': class_label,
-                    'class_label_vi': class_label_vi
+                    'class_label_vi': class_label_vi_display,  # Dùng để hiển thị
+                    'class_label_vi_filename': class_label_vi_filename  # Dùng cho tên file
                 }
                 detections.append(detection)
         
