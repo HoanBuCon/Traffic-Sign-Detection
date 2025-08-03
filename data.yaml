@@ -1,63 +1,29 @@
-# Dataset configuration
-path: ./dataset
-train: images/train
-val: images/val
+train: ../train/images
+val: ../valid/images
+test: ../test/images
 
-# Number of classes
-nc: 52  # Số lượng lớp biển báo giao thông
+nc: 12
+names: ['i.423.b', 'p.102', 'p.106.b', 'p.130', 'p.131.a', 'r.308.b', 'sus', 'w.201.a', 'w.203.c', 'w.207.b', 'w.207.c', 'w.209']
 
-# Tên các lớp (key: số thứ tự, value: mã nhãn)
-names: [
-  "W.224",
-  "W.205c",
-  "P.102",
-  "R.302a",
-  "W.205a",
-  "W.207",
-  "W.201a",
-  "P.123a",
-  "I.434a",
-  "R.303",
-  "P.130",
-  "I.409",
-  "R.415a",
-  "W.245a",
-  "P.106a*Xe_tai",
-  "W.203c",
-  "P.117*",
-  "P.124a*",
-  "P.107",
-  "P.124d",
-  "P.103a",
-  "W.203b",
-  "W.221b",
-  "P.111",
-  "P.129",
-  "S.505a*Xe_may",
-  "W.246a",
-  "W.225",
-  "S.505a*Xe_tai_va_cong",
-  "P.104",
-  "S.505a*Xe_tai",
-  "Camera",
-  "P.123b",
-  "W.202b",
-  "B.8a",
-  "P.137",
-  "P.139",
-  "W.205b",
-  "P.127*50",
-  "P.127*60",
-  "P.127*80",
-  "P.127*40",
-  "R.301e",
-  "W.239b*",
-  "W.233",
-  "I.407a",
-  "P.131a",
-  "P.124b1",
-  "W.210",
-  "P.124c",
-  "W.201b",
-  "W.246c"
+# Mô tả tiếng Việt cho các class labels (ánh xạ với predict scripts)
+descriptions: [
+  'Đường kẻ dành cho người đi bộ',           # i.423.b
+  'Cấm đi ngược chiều',                      # p.102
+  'Cấm xe tải trên N tấn',                   # p.106.b
+  'Cấm dừng và đỗ xe',                       # p.130
+  'Cấm đỗ xe',                               # p.131.a
+  'Tuyến đường cầu vượt cắt qua',            # r.308.b
+  'TEXT SIGN',                               # sus
+  'Cảnh báo khúc cua nguy hiểm bên trái',    # w.201.a
+  'Cảnh báo đường hẹp',                      # w.203.c
+  'Cảnh báo giao nhau với đường không ưu tiên bên phải',  # w.207.b
+  'Cảnh báo giao nhau với đường không ưu tiên bên trái',  # w.207.c
+  'Cảnh báo đến khu vực đèn tín hiệu giao thông'          # w.209
 ]
+
+roboflow:
+  workspace: traffic-sign-detection-hzj9m
+  project: traffic-sign-detection-e1j1v
+  version: 4
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/traffic-sign-detection-hzj9m/traffic-sign-detection-e1j1v/dataset/4

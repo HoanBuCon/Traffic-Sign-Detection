@@ -101,69 +101,26 @@ def remove_vietnamese_diacritics(text):
     text = text.replace('__', '_')
     return text
 
-descriptions_vi = [
-    "Đường người đi bộ cắt ngang",
-    "Đường giao nhau (ngã ba bên phải)",
-    "Cấm đi ngược chiều",
-    "Phải đi vòng sang bên phải",
-    "Giao nhau với đường đồng cấp",
-    "Giao nhau với đường không ưu tiên",
-    "Chỗ ngoặt nguy hiểm vòng bên trái",
-    "Cấm rẽ trái",
-    "Bến xe buýt",
-    "Nơi giao nhau chạy theo vòng xuyến",
-    "Cấm dừng và đỗ xe",
-    "Chỗ quay xe",
-    "Biển gộp làn đường theo phương tiện",
-    "Đi chậm",
-    "Cấm xe tải",
-    "Đường bị thu hẹp về phía phải",
-    "Giới hạn chiều cao",
-    "Cấm quay đầu",
-    "Cấm ô tô khách và ô tô tải",
-    "Cấm rẽ phải và quay đầu",
-    "Cấm ô tô",
-    "Đường bị thu hẹp về phía trái",
-    "Gồ giảm tốc phía trước",
-    "Cấm xe hai và ba bánh",
-    "Kiểm tra",
-    "Chỉ dành cho xe máy*",
-    "Chướng ngoại vật phía trước",
-    "Trẻ em",
-    "Xe tải và xe công*",
-    "Cấm mô tô và xe máy",
-    "Chỉ dành cho xe tải*",
-    "Đường có camera giám sát",
-    "Cấm rẽ phải",
-    "Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang phải",
-    "Cấm xe sơ-mi rơ-moóc",
-    "Cấm rẽ trái và phải",
-    "Cấm đi thẳng và rẽ phải",
-    "Đường giao nhau (ngã ba bên trái)",
-    "Giới hạn tốc độ (50km/h)",
-    "Giới hạn tốc độ (60km/h)",
-    "Giới hạn tốc độ (80km/h)",
-    "Giới hạn tốc độ (40km/h)",
-    "Các xe chỉ được rẽ trái",
-    "Chiều cao tĩnh không thực tế",
-    "Nguy hiểm khác",
-    "Đường một chiều",
-    "Cấm đỗ xe",
-    "Cấm ô tô quay đầu xe (được rẽ trái)",
-    "Giao nhau với đường sắt có rào chắn",
-    "Cấm rẽ trái và quay đầu xe",
-    "Chỗ ngoặt nguy hiểm vòng bên phải",
-    "Chú ý chướng ngại vật – vòng tránh sang bên phải"
-]
-descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
+# Load descriptions từ data.yaml
+def load_descriptions_from_yaml(yaml_path='data.yaml'):
+    """Load descriptions từ file data.yaml"""
+    try:
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            data_yaml = yaml.safe_load(f)
+            descriptions = data_yaml.get('descriptions', [])
+            if not descriptions:
+                print(f"[WARNING] No descriptions found in {yaml_path}")
+                return []
+            else:
+                print(f"[INFO] Loaded {len(descriptions)} descriptions from {yaml_path}")
+            return descriptions
+    except Exception as e:
+        print(f"[ERROR] Failed to load descriptions from {yaml_path}: {e}")
+        return []
 
-class_ids = [
-    "W.301", "W.302a", "P.101a", "P.123a", "W.207", "W.208", "W.212b", "P.124a", "S.507", "W.224", "P.131a",
-    "S.407", "R.411", "P.135", "P.106a", "W.233a", "P.117a", "P.125", "P.108", "P.124b", "P.102", "W.233b",
-    "W.235", "P.109", "S.501", "R.412", "R.412a", "W.211", "W.210", "P.106b", "P.111b", "R.413", "S.510",
-    "P.124c", "W.212a", "P.111a", "P.132", "P.134", "W.302b", "P.127", "P.128", "P.129", "P.126", "R.407",
-    "P.117b", "W.245", "R.407a", "P.130", "P.131b", "P.110", "W.222", "P.124d", "W.212c", "W.212d", "W.212e"
-]
+# Load descriptions từ data.yaml
+descriptions_vi = load_descriptions_from_yaml()
+descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
 
 class RealTimeTrafficSignDetectorNLP:
     def __init__(self, model_path=None):
@@ -189,12 +146,6 @@ class RealTimeTrafficSignDetectorNLP:
         self.label_buffers = {}
         self.buffer_size = 10
         self._load_nlp_model()
-        self.TARGET_CLASSES_FOR_NLP = [
-            "Bien_gop_lan_duong_theo_phuong_tien",
-            "Nguy_hiem_khac",
-            "Chieu_cao_tinh_khong_thuc_te",
-            "Cam_o_to_quay_dau_xe_(duoc_re_trai)"
-        ]
         self.ocr_cache = {}  # key: object_id, value: {'ocr_text': ..., 'bbox': ..., 'last_update': ...}
         self.frame_count = 0
 
@@ -222,12 +173,52 @@ class RealTimeTrafficSignDetectorNLP:
         try:
             pil_image = Image.fromarray(cv2.cvtColor(sign_image, cv2.COLOR_BGR2RGB))
             pixel_values = load_image_for_vintern(pil_image, input_size=448, max_num=4).to(torch.float16).to(self.device)
-            generation_config = dict(max_new_tokens=128, do_sample=False, num_beams=3, repetition_penalty=1.5, pad_token_id=self.vintern_tokenizer.eos_token_id)
-            question = "<image>\nChỉ trả về nội dung chữ trên biển báo, không giải thích gì thêm."
+            generation_config = dict(max_new_tokens=200, do_sample=False, num_beams=4, repetition_penalty=1.2, pad_token_id=self.vintern_tokenizer.eos_token_id)
+            
+            # Prompt tối ưu để đọc được nhiều địa danh nhưng ngắn gọn hơn
+            question = """<image>
+Hãy đọc biển báo chỉ dẫn này như một người dẫn đường. Chỉ mô tả hướng đi khi trên biển có mũi tên chỉ dẫn rõ ràng.
+
+Cách xác định hướng mũi tên:
+• Nếu mũi tên **thẳng đứng**, không lệch → Hướng: Đi thẳng
+• Nếu mũi tên **chỉ sang trái rõ ràng** → Hướng: Rẽ trái
+• Nếu mũi tên **chỉ sang phải rõ ràng** → Hướng: Rẽ phải
+• Nếu mũi tên **cong hoặc vòng** → mô tả là: "Rẽ vòng [trái/phải] đến [địa điểm]"
+
+Yêu cầu:
+- Chỉ mô tả hướng có mũi tên thật.
+- Khoảng cách ghi nếu có, nếu không thì bỏ qua.
+- Trả lời ngắn gọn, mỗi hướng một dòng.
+
+Ví dụ:
+- Đi thẳng 2km đến Tân Cương
+- Rẽ trái 16km đến Đại Từ
+- Rẽ phải 91km đến Bắc Kạn"""
+            
             response, history = self.vintern_model.chat(self.vintern_tokenizer, pixel_values, question, generation_config, history=None, return_history=True)
-            response = response.strip().split('\n')[0]
-            response = response.replace('**', '').replace('`', '').strip()
-            return response
+            
+            # Xử lý response để giữ lại nhiều dòng thông tin
+            response = response.strip()
+            response = response.replace('**', '').replace('`', '').replace('*', '')
+            
+            # Loại bỏ các dòng giải thích không cần thiết
+            lines = []
+            for line in response.split('\n'):
+                line = line.strip()
+                # Loại bỏ những dòng giải thích dài dòng
+                if line and len(line) < 100 and not any(skip_word in line.lower() for skip_word in 
+                    ['theo như', 'dựa vào', 'từ hình ảnh', 'tôi thấy', 'biển báo này', 'hình ảnh không', 'không cung cấp']):
+                    lines.append(line)
+            
+            # Kết hợp các dòng bằng dấu " | " để hiển thị đầy đủ
+            if lines:
+                result = ' | '.join(lines[:3])  # Giới hạn tối đa 3 phần để tránh quá dài
+                return result
+            else:
+                # Fallback về phương pháp cũ nếu không có kết quả tốt
+                first_line = response.split('\n')[0] if response else ""
+                return first_line[:100] if len(first_line) > 100 else first_line
+                
         except Exception as e:
             print(f"[ERROR] Lỗi khi xử lý OCR Vintern: {e}")
             return ""
@@ -349,7 +340,6 @@ class RealTimeTrafficSignDetectorNLP:
             class_idx_smooth = self.smooth_label(class_idx, object_id, confidence)
             class_label = self.class_names[class_idx_smooth] if isinstance(self.class_names, list) and class_idx_smooth < len(self.class_names) else str(class_idx_smooth)
             class_label_vi = descriptions_vi_no_diacritics[class_idx_smooth] if class_idx_smooth < len(descriptions_vi_no_diacritics) else class_label
-            class_id_code = class_ids[class_idx_smooth] if class_idx_smooth < len(class_ids) else str(class_idx_smooth)
             detection = {
                 'object_id': object_id,
                 'bbox': [x1, y1, x2, y2],
@@ -357,10 +347,9 @@ class RealTimeTrafficSignDetectorNLP:
                 'class_id': class_idx_smooth,
                 'class_label': class_label,
                 'class_label_vi': class_label_vi,
-                'class_id_code': class_id_code,
                 'ocr_text': None
             }
-            if class_label_vi in self.TARGET_CLASSES_FOR_NLP:
+            if class_label == "sus":
                 padding = 5
                 crop_x1 = max(0, x1 - padding)
                 crop_y1 = max(0, y1 - padding)
@@ -405,12 +394,19 @@ class RealTimeTrafficSignDetectorNLP:
             font = ImageFont.load_default()
         for det in detections:
             x1, y1, x2, y2 = map(int, det['bbox'])
-            label = f"ID:{det['object_id']} | {det['class_id_code']} | {det['class_label_vi']} | {det['confidence']:.2f}"
+            # Lấy mã biển báo từ class_names thay vì dùng class_id_code hardcode
+            class_code = det['class_label'] if 'class_label' in det else f"Class_{det['class_id']}"
+            description_no_diacritics = det['class_label_vi'] if 'class_label_vi' in det else class_code
+            confidence = det['confidence']
+            
+            # Format: Mã biển | Description_tieng_viet_khong_dai | Độ tin cậy
+            label = f"{class_code} | {description_no_diacritics} | {confidence:.1%}"
             draw.text((x1, y1 - 25), label, font=font, fill=(0,255,0))
+            
             if det.get('ocr_text'):
                 ocr_label = f"OCR: {det['ocr_text']}"
                 draw.text((x1, y2 + 5), ocr_label, font=font, fill=(255,255,255))
-                print(f"{det['object_id']} | {det['class_id_code']} | {det['class_label_vi']} | {det['ocr_text']}")
+                print(f"{class_code} | {description_no_diacritics} | {det['ocr_text']}")
         # Chuyển lại sang cv2 để hiển thị
         frame_show = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
         cv2.imshow('Traffic Sign Detection - SORT Smoothing', frame_show)

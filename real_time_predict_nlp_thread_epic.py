@@ -18,6 +18,8 @@ import threading
 import queue
 import logging
 import datetime
+import math
+from scipy.spatial.distance import euclidean
 
 # ==== CONFIG TỐI ƯU ====
 EPIC_CONFIG = {
@@ -118,71 +120,26 @@ def remove_vietnamese_diacritics(text):
     text = text.replace('__', '_')
     return text
 
-# ==== Danh sách class giữ nguyên như cũ (cắt bớt cho gọn) ====
-descriptions_vi = [
-    "Đường người đi bộ cắt ngang",
-    "Đường giao nhau (ngã ba bên phải)",
-    "Cấm đi ngược chiều",
-    "Phải đi vòng sang bên phải",
-    "Giao nhau với đường đồng cấp",
-    "Giao nhau với đường không ưu tiên",
-    "Chỗ ngoặt nguy hiểm vòng bên trái",
-    "Cấm rẽ trái",
-    "Bến xe buýt",
-    "Nơi giao nhau chạy theo vòng xuyến",
-    "Cấm dừng và đỗ xe",
-    "Chỗ quay xe",
-    "Biển gộp làn đường theo phương tiện",
-    "Đi chậm",
-    "Cấm xe tải",
-    "Đường bị thu hẹp về phía phải",
-    "Giới hạn chiều cao",
-    "Cấm quay đầu",
-    "Cấm ô tô khách và ô tô tải",
-    "Cấm rẽ phải và quay đầu",
-    "Cấm ô tô",
-    "Đường bị thu hẹp về phía trái",
-    "Gồ giảm tốc phía trước",
-    "Cấm xe hai và ba bánh",
-    "Kiểm tra",
-    "Chỉ dành cho xe máy*",
-    "Chướng ngoại vật phía trước",
-    "Trẻ em",
-    "Xe tải và xe công*",
-    "Cấm mô tô và xe máy",
-    "Chỉ dành cho xe tải*",
-    "Đường có camera giám sát",
-    "Cấm rẽ phải",
-    "Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang phải",
-    "Cấm xe sơ-mi rơ-moóc",
-    "Cấm rẽ trái và phải",
-    "Cấm đi thẳng và rẽ phải",
-    "Đường giao nhau (ngã ba bên trái)",
-    "Giới hạn tốc độ (50km/h)",
-    "Giới hạn tốc độ (60km/h)",
-    "Giới hạn tốc độ (80km/h)",
-    "Giới hạn tốc độ (40km/h)",
-    "Các xe chỉ được rẽ trái",
-    "Chiều cao tĩnh không thực tế",
-    "Nguy hiểm khác",
-    "Đường một chiều",
-    "Cấm đỗ xe",
-    "Cấm ô tô quay đầu xe (được rẽ trái)",
-    "Giao nhau với đường sắt có rào chắn",
-    "Cấm rẽ trái và quay đầu xe",
-    "Chỗ ngoặt nguy hiểm vòng bên phải",
-    "Chú ý chướng ngại vật – vòng tránh sang bên phải"
-]
+# Load descriptions từ data.yaml
+def load_descriptions_from_yaml(yaml_path='data.yaml'):
+    """Load descriptions từ file data.yaml"""
+    try:
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            data_yaml = yaml.safe_load(f)
+            descriptions = data_yaml.get('descriptions', [])
+            if not descriptions:
+                print(f"[WARNING] No descriptions found in {yaml_path}")
+                return []
+            else:
+                print(f"[INFO] Loaded {len(descriptions)} descriptions from {yaml_path}")
+            return descriptions
+    except Exception as e:
+        print(f"[ERROR] Failed to load descriptions from {yaml_path}: {e}")
+        return []
 
+# Load descriptions từ data.yaml
+descriptions_vi = load_descriptions_from_yaml()
 descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
-
-class_ids = [
-    "W.301", "W.302a", "P.101a", "P.123a", "W.207", "W.208", "W.212b", "P.124a", "S.507", "W.224", "P.131a",
-    "S.407", "R.411", "P.135", "P.106a", "W.233a", "P.117a", "P.125", "P.108", "P.124b", "P.102", "W.233b",
-    "W.235", "P.109", "S.501", "R.412", "R.412a", "W.211", "W.210", "P.106b", "P.111b", "R.413", "S.510",
-    "P.124c", "W.212a", "P.111a", "P.132", "P.134", "W.302b", "P.127", "P.128", "P.129", "P.126", "R.407",
-    "P.117b", "W.245", "R.407a", "P.130", "P.131b", "P.110", "W.222", "P.124d", "W.212c", "W.212d", "W.212e"
-]
 
 def bbox_iou(box1, box2):
     b1_x1, b1_y1, b1_x2, b1_y2 = box1
@@ -196,6 +153,215 @@ def bbox_iou(box1, box2):
     b2_area = (b2_x2 - b2_x1 + 1) * (b2_y2 - b2_y1 + 1)
     iou = inter_area / float(b1_area + b2_area - inter_area)
     return iou
+
+# ==== COMPUTER VISION ARROW DETECTION ====
+class ArrowDetector:
+    """Phân tích hướng mũi tên bằng Computer Vision"""
+    
+    def __init__(self):
+        self.arrow_templates = self._create_arrow_templates()
+    
+    def _create_arrow_templates(self):
+        """Tạo template mũi tên cho template matching"""
+        templates = {}
+        # Template mũi tên trái (30x20)
+        left_arrow = np.zeros((20, 30), dtype=np.uint8)
+        cv2.arrowedLine(left_arrow, (25, 10), (5, 10), 255, 2, tipLength=0.3)
+        templates['left'] = left_arrow
+        
+        # Template mũi tên phải
+        right_arrow = np.zeros((20, 30), dtype=np.uint8)
+        cv2.arrowedLine(right_arrow, (5, 10), (25, 10), 255, 2, tipLength=0.3)
+        templates['right'] = right_arrow
+        
+        # Template mũi tên thẳng
+        straight_arrow = np.zeros((30, 20), dtype=np.uint8)
+        cv2.arrowedLine(straight_arrow, (10, 25), (10, 5), 255, 2, tipLength=0.3)
+        templates['straight'] = straight_arrow
+        
+        return templates
+    
+    def detect_arrow_direction(self, sign_image: np.ndarray) -> dict:
+        """
+        Phân tích hướng mũi tên bằng nhiều phương pháp
+        Returns: {'direction': 'left/right/straight', 'confidence': float, 'angle': float}
+        """
+        try:
+            # Chuyển sang grayscale
+            if len(sign_image.shape) == 3:
+                gray = cv2.cvtColor(sign_image, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = sign_image.copy()
+            
+            # Phương pháp 1: Template Matching
+            template_result = self._template_matching(gray)
+            
+            # Phương pháp 2: Contour Analysis
+            contour_result = self._contour_analysis(gray)
+            
+            # Phương pháp 3: Edge Direction Analysis
+            edge_result = self._edge_direction_analysis(gray)
+            
+            # Kết hợp kết quả từ 3 phương pháp
+            final_result = self._combine_results([template_result, contour_result, edge_result])
+            
+            return final_result
+            
+        except Exception as e:
+            print(f"[ARROW] Error detecting arrow: {e}")
+            return {'direction': 'unknown', 'confidence': 0.0, 'angle': 0.0}
+    
+    def _template_matching(self, gray_image):
+        """Template matching với các mũi tên chuẩn"""
+        best_match = {'direction': 'unknown', 'confidence': 0.0, 'angle': 0.0}
+        
+        for direction, template in self.arrow_templates.items():
+            # Resize template cho phù hợp
+            h, w = template.shape
+            resized_template = cv2.resize(template, (min(gray_image.shape[1]//3, w), min(gray_image.shape[0]//3, h)))
+            
+            # Template matching
+            result = cv2.matchTemplate(gray_image, resized_template, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, _ = cv2.minMaxLoc(result)
+            
+            if max_val > best_match['confidence']:
+                best_match = {
+                    'direction': direction,
+                    'confidence': max_val,
+                    'angle': self._direction_to_angle(direction)
+                }
+        
+        return best_match
+    
+    def _contour_analysis(self, gray_image):
+        """Phân tích contour để tìm hình dạng mũi tên"""
+        # Threshold và tìm contours
+        _, binary = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        best_arrow = {'direction': 'unknown', 'confidence': 0.0, 'angle': 0.0}
+        
+        for contour in contours:
+            # Lọc contour quá nhỏ
+            if cv2.contourArea(contour) < 50:
+                continue
+            
+            # Approximate contour
+            epsilon = 0.02 * cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, epsilon, True)
+            
+            # Phân tích hình dạng mũi tên
+            if len(approx) >= 5:  # Mũi tên thường có 5-7 điểm
+                arrow_analysis = self._analyze_arrow_shape(approx)
+                if arrow_analysis['confidence'] > best_arrow['confidence']:
+                    best_arrow = arrow_analysis
+        
+        return best_arrow
+    
+    def _analyze_arrow_shape(self, approx_contour):
+        """Phân tích hình dạng để xác định hướng mũi tên"""
+        points = approx_contour.reshape(-1, 2)
+        
+        # Tìm điểm xa nhất (có thể là đầu mũi tên)
+        center = np.mean(points, axis=0)
+        distances = [euclidean(point, center) for point in points]
+        tip_idx = np.argmax(distances)
+        tip_point = points[tip_idx]
+        
+        # Tính vector từ center đến tip
+        direction_vector = tip_point - center
+        angle = math.atan2(direction_vector[1], direction_vector[0]) * 180 / math.pi
+        
+        # Xác định hướng dựa trên góc
+        if -45 <= angle <= 45:
+            direction = 'right'
+        elif 135 <= angle <= 180 or -180 <= angle <= -135:
+            direction = 'left'
+        elif 45 < angle < 135:
+            direction = 'straight'
+        else:
+            direction = 'unknown'
+        
+        # Confidence dựa trên độ đối xứng và tỷ lệ
+        confidence = min(1.0, len(points) / 10.0)  # Càng nhiều điểm càng tốt
+        
+        return {'direction': direction, 'confidence': confidence, 'angle': angle}
+    
+    def _edge_direction_analysis(self, gray_image):
+        """Phân tích hướng edges để xác định mũi tên"""
+        # Sobel edge detection
+        sobel_x = cv2.Sobel(gray_image, cv2.CV_64F, 1, 0, ksize=3)
+        sobel_y = cv2.Sobel(gray_image, cv2.CV_64F, 0, 1, ksize=3)
+        
+        # Tính hướng gradient
+        angles = np.arctan2(sobel_y, sobel_x) * 180 / np.pi
+        magnitudes = np.sqrt(sobel_x**2 + sobel_y**2)
+        
+        # Lọc edges mạnh
+        strong_edges = magnitudes > np.percentile(magnitudes, 80)
+        strong_angles = angles[strong_edges]
+        
+        if len(strong_angles) == 0:
+            return {'direction': 'unknown', 'confidence': 0.0, 'angle': 0.0}
+        
+        # Phân tích histogram góc
+        hist, bin_edges = np.histogram(strong_angles, bins=36, range=(-180, 180))
+        dominant_angle_idx = np.argmax(hist)
+        dominant_angle = (bin_edges[dominant_angle_idx] + bin_edges[dominant_angle_idx + 1]) / 2
+        
+        # Xác định hướng
+        if -45 <= dominant_angle <= 45:
+            direction = 'right'
+        elif 135 <= dominant_angle <= 180 or -180 <= dominant_angle <= -135:
+            direction = 'left'
+        elif 45 < dominant_angle < 135:
+            direction = 'straight'
+        else:
+            direction = 'unknown'
+        
+        confidence = hist[dominant_angle_idx] / len(strong_angles)
+        
+        return {'direction': direction, 'confidence': confidence, 'angle': dominant_angle}
+    
+    def _combine_results(self, results):
+        """Kết hợp kết quả từ nhiều phương pháp"""
+        # Weighted voting
+        direction_votes = {}
+        total_confidence = 0
+        
+        for result in results:
+            direction = result['direction']
+            confidence = result['confidence']
+            
+            if direction != 'unknown':
+                if direction not in direction_votes:
+                    direction_votes[direction] = 0
+                direction_votes[direction] += confidence
+                total_confidence += confidence
+        
+        if not direction_votes:
+            return {'direction': 'unknown', 'confidence': 0.0, 'angle': 0.0}
+        
+        # Chọn hướng có votes cao nhất
+        best_direction = max(direction_votes, key=direction_votes.get)
+        best_confidence = direction_votes[best_direction] / max(total_confidence, 1)
+        best_angle = self._direction_to_angle(best_direction)
+        
+        return {
+            'direction': best_direction,
+            'confidence': best_confidence,
+            'angle': best_angle
+        }
+    
+    def _direction_to_angle(self, direction):
+        """Chuyển hướng thành góc"""
+        angle_map = {
+            'right': 0,
+            'straight': 90,
+            'left': 180,
+            'unknown': 0
+        }
+        return angle_map.get(direction, 0)
 
 # ==== CLASS CHÍNH ====
 class RealTimeTrafficSignDetectorNLPThreadEpic:
@@ -226,13 +392,12 @@ class RealTimeTrafficSignDetectorNLPThreadEpic:
         self.ocr_queue_sent = set()
         self.label_buffers = {}
         self.buffer_size = 10
-        self.TARGET_CLASSES_FOR_NLP = [
-            "Bien_gop_lan_duong_theo_phuong_tien",
-            "Nguy_hiem_khac",
-            "Chieu_cao_tinh_khong_thuc_te",
-            "Cam_o_to_quay_dau_xe_(duoc_re_trai)"
-        ]
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        # Khởi tạo Computer Vision Arrow Detector
+        self.arrow_detector = ArrowDetector()
+        print("[EPIC] Arrow detector initialized")
+        
         self._load_nlp_model()
         # Chỉ khởi động 1 thread OCR
         threading.Thread(target=self.ocr_worker, daemon=True).start()
@@ -277,20 +442,135 @@ class RealTimeTrafficSignDetectorNLPThreadEpic:
                 print(f"[ERROR] OCR thread: {e}")
 
     def _get_text_from_sign(self, sign_image: np.ndarray) -> str:
+        """Hybrid approach: Computer Vision + NLP"""
         if self.vintern_model is None or self.vintern_tokenizer is None:
             return ""
         try:
+            # Bước 1: Computer Vision phân tích hướng mũi tên
+            arrow_result = self.arrow_detector.detect_arrow_direction(sign_image)
+            cv_direction = arrow_result.get('direction', 'unknown')
+            cv_confidence = arrow_result.get('confidence', 0.0)
+            cv_angle = arrow_result.get('angle', 0.0)
+            
+            print(f"[ARROW CV] Direction: {cv_direction}, Confidence: {cv_confidence:.2f}, Angle: {cv_angle:.1f}°")
+            
+            # Bước 2: NLP đọc text và xác nhận hướng
             pil_image = Image.fromarray(cv2.cvtColor(sign_image, cv2.COLOR_BGR2RGB))
             pixel_values = load_image_for_vintern(pil_image, input_size=448, max_num=4).to(torch.float16).to(self.device)
-            generation_config = dict(max_new_tokens=128, do_sample=False, num_beams=3, repetition_penalty=1.5, pad_token_id=self.vintern_tokenizer.eos_token_id)
-            question = "<image>\nChỉ trả về nội dung chữ trên biển báo, không giải thích gì thêm."
+            generation_config = dict(max_new_tokens=150, do_sample=False, num_beams=3, repetition_penalty=1.3, pad_token_id=self.vintern_tokenizer.eos_token_id)
+            
+            # Prompt được tối ưu cho việc đọc text và địa điểm
+            question = f"""<image>
+Bạn là trợ lý GPS. Hãy quan sát biển báo chỉ dẫn và hướng dẫn người lái xe theo **các mũi tên thật sự có trên biển**.
+
+Yêu cầu:
+1. Chỉ mô tả hướng đi nếu trên biển có mũi tên thật.
+2. Nếu có khoảng cách ghi trên biển, hãy thêm vào hướng dẫn. Nếu không có, chỉ cần nói hướng và địa điểm.
+3. Tránh sao chép bất kỳ câu mẫu nào. Hãy tạo câu tự nhiên như đang dẫn đường, không cần tuân theo cấu trúc cố định.
+4. Kiểm tra kỹ hình dạng mũi tên để xác định đúng hướng: đi thẳng, rẽ trái, rẽ phải.
+
+Ghi nhớ:
+- Không phát minh thêm hướng đi nếu không thấy mũi tên.
+- Không bỏ sót khoảng cách nếu biển báo có ghi.
+
+Hãy bắt đầu chỉ đường, mỗi hướng là một dòng riêng."""
+            
             response, history = self.vintern_model.chat(self.vintern_tokenizer, pixel_values, question, generation_config, history=None, return_history=True)
-            response = response.strip().split('\n')[0]
-            response = response.replace('**', '').replace('`', '').strip()
-            return response
+            
+            # Bước 3: Xử lý và kết hợp kết quả
+            nlp_result = self._process_nlp_response(response)
+            
+            # Bước 4: Fusion hai kết quả
+            final_result = self._fuse_cv_nlp_results(cv_direction, cv_confidence, nlp_result)
+            
+            return final_result
+                
         except Exception as e:
-            print(f"[ERROR] Lỗi khi xử lý OCR Vintern: {e}")
+            print(f"[ERROR] Lỗi khi xử lý hybrid OCR: {e}")
             return ""
+    
+    def _process_nlp_response(self, response: str) -> str:
+        """Xử lý response từ NLP model"""
+        response = response.strip()
+        response = response.replace('**', '').replace('`', '').replace('*', '')
+        
+        # Tách các dòng và lọc thông tin hữu ích
+        all_lines = []
+        for line in response.split('\n'):
+            line = line.strip()
+            if line and len(line) >= 3 and len(line) <= 120:
+                # Loại bỏ các dòng mô tả không cần thiết
+                if not any(skip in line.lower() for skip in [
+                    'biển báo', 'hình ảnh', 'theo thứ tự', 'liệt kê', 'đọc được',
+                    'nhìn thấy', 'có thể thấy', 'xuất hiện', 'tôi thấy', 'dựa vào',
+                    'computer vision', 'đã phát hiện', 'xác nhận'
+                ]):
+                    # Làm sạch dòng
+                    clean_line = line.lstrip('- ').lstrip('• ').lstrip('1234567890. ').strip()
+                    if clean_line and len(clean_line) >= 2:
+                        all_lines.append(clean_line)
+        
+        # Kết hợp các dòng bằng " | "
+        if all_lines:
+            result = ' | '.join(all_lines[:3])  # Lấy tối đa 3 dòng đầu tiên
+            return result
+        else:
+            # Fallback: lấy response gốc và làm sạch
+            fallback = response.replace('\n', ' ').strip()
+            if len(fallback) > 150:
+                fallback = fallback[:150] + "..."
+            return fallback
+    
+    def _fuse_cv_nlp_results(self, cv_direction: str, cv_confidence: float, nlp_result: str) -> str:
+        """Kết hợp kết quả Computer Vision và NLP"""
+        
+        # Nếu CV có confidence cao, ưu tiên CV
+        if cv_confidence >= 0.7 and cv_direction != 'unknown':
+            direction_map = {
+                'left': 'Rẽ trái',
+                'right': 'Rẽ phải', 
+                'straight': 'Đi thẳng'
+            }
+            cv_text = direction_map.get(cv_direction, '')
+            
+            # Trích xuất địa điểm từ NLP nếu có
+            location = self._extract_location_from_nlp(nlp_result)
+            if location:
+                return f"{cv_text} đến {location}"
+            else:
+                return f"{cv_text} (CV: {cv_confidence:.1%})"
+        
+        # Nếu CV confidence thấp, ưu tiên NLP
+        elif cv_confidence < 0.7:
+            print(f"[FUSION] CV confidence thấp ({cv_confidence:.2f}), sử dụng NLP: {nlp_result}")
+            return nlp_result
+        
+        # Fallback
+        else:
+            return nlp_result if nlp_result else f"Hướng {cv_direction} (CV)"
+    
+    def _extract_location_from_nlp(self, nlp_text: str) -> str:
+        """Trích xuất tên địa điểm từ kết quả NLP"""
+        if not nlp_text:
+            return ""
+        
+        # Tìm pattern "đến [địa điểm]"
+        import re
+        patterns = [
+            r'đến\s+([^|]+)',
+            r'về\s+([^|]+)', 
+            r'tới\s+([^|]+)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, nlp_text, re.IGNORECASE)
+            if match:
+                location = match.group(1).strip()
+                # Loại bỏ khoảng cách nếu có
+                location = re.sub(r'\d+[km\s]*', '', location).strip()
+                return location
+        
+        return ""
 
     def smooth_label(self, class_idx, object_id, confidence):
         if object_id not in self.label_buffers:
@@ -356,7 +636,6 @@ class RealTimeTrafficSignDetectorNLPThreadEpic:
             class_idx_smooth = self.smooth_label(class_idx, object_id, confidence)
             class_label = self.class_names[class_idx_smooth] if isinstance(self.class_names, list) and class_idx_smooth < len(self.class_names) else str(class_idx_smooth)
             class_label_vi = descriptions_vi_no_diacritics[class_idx_smooth] if class_idx_smooth < len(descriptions_vi_no_diacritics) else class_label
-            class_id_code = class_ids[class_idx_smooth] if class_idx_smooth < len(class_ids) else str(class_idx_smooth)
             detection = {
                 'object_id': object_id,
                 'bbox': [x1, y1, x2, y2],
@@ -364,10 +643,10 @@ class RealTimeTrafficSignDetectorNLPThreadEpic:
                 'class_id': class_idx_smooth,
                 'class_label': class_label,
                 'class_label_vi': class_label_vi,
-                'class_id_code': class_id_code,
                 'ocr_text': None
             }
-            if class_label_vi in self.TARGET_CLASSES_FOR_NLP:
+            # Chỉ sử dụng NLP cho biển báo "sus" (TEXT SIGN) khi YOLO detect được
+            if class_label == "sus":  # Chỉ khi YOLO nhận diện được class "sus"
                 padding = 5
                 crop_x1 = max(0, x1 - padding)
                 crop_y1 = max(0, y1 - padding)
@@ -403,12 +682,19 @@ class RealTimeTrafficSignDetectorNLPThreadEpic:
             font = ImageFont.load_default()
         for det in detections:
             x1, y1, x2, y2 = map(int, det['bbox'])
-            label = f"ID:{det['object_id']} | {det['class_id_code']} | {det['class_label_vi']} | {det['confidence']:.2f}"
+            # Lấy mã biển báo từ class_names thay vì dùng class_id_code hardcode
+            class_code = det['class_label'] if 'class_label' in det else f"Class_{det['class_id']}"
+            description_no_diacritics = det['class_label_vi'] if 'class_label_vi' in det else class_code
+            confidence = det['confidence']
+            
+            # Format: Mã biển | Description_tieng_viet_khong_dai | Độ tin cậy
+            label = f"{class_code} | {description_no_diacritics} | {confidence:.1%}"
             draw.text((x1, y1 - 25), label, font=font, fill=(0,255,0))
+            
             if det.get('ocr_text') and det['ocr_text'] != '...':
                 ocr_label = f"OCR: {det['ocr_text']}"
                 draw.text((x1, y2 + 5), ocr_label, font=font, fill=(255,255,255))
-                print(f"{det['object_id']} | {det['class_id_code']} | {det['class_label_vi']} | {det['ocr_text']}")
+                print(f"{class_code} | {description_no_diacritics} | {det['ocr_text']}")
         if 'SHOW_FPS' in EPIC_CONFIG and EPIC_CONFIG['SHOW_FPS']:
             draw.text((10, 10), f"FPS: {self.fps}", font=font, fill=(255,0,0))
             draw.text((10, 40), f"Track: {len(detections)}", font=font, fill=(255,0,0))
