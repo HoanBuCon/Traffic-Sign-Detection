@@ -14,6 +14,43 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 class TrafficSignTrainer:
+    def test(self, model_path: str = None):
+        """
+        Test the trained model on the test set
+        Args:
+            model_path: Path to the model to test (default: best model)
+        """
+        if model_path is None:
+            model_path = self.config.BEST_MODEL_PATH
+
+        if not os.path.exists(model_path):
+            print(f"Model not found at: {model_path}")
+            return
+
+        try:
+            # Load the model
+            model = YOLO(model_path)
+
+            # Test (use split='test' if supported, else set data to self.data_yaml_path and YOLOv8 will use test set if defined)
+            results = model.val(
+                data=self.data_yaml_path,
+                imgsz=self.config.IMAGE_SIZE,
+                batch=self.config.BATCH_SIZE,
+                device=0 if torch.cuda.is_available() else 'cpu',
+                split='test',
+                verbose=True
+            )
+
+            # Print test results
+            print("\nTest Results:")
+            print(f"mAP50: {results.results_dict.get('metrics/mAP50(B)', 0):.4f}")
+            print(f"mAP50-95: {results.results_dict.get('metrics/mAP50-95(B)', 0):.4f}")
+
+            return results
+
+        except Exception as e:
+            print(f"\nError during test: {str(e)}")
+            raise
     def __init__(self):
         """Initialize the trainer with configuration"""
         self.config = Config
@@ -176,7 +213,9 @@ def main():
     print("\nStarting validation...")
     val_results = trainer.validate()
     
-    print("\nTraining and validation completed!")
+    print("\nStarting test on test set...")
+    test_results = trainer.test()
+    print("\nTraining, validation and test completed!")
 
 if __name__ == "__main__":
     main() 
