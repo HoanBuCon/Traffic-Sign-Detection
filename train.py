@@ -31,7 +31,8 @@ class TrafficSignTrainer:
             # Load the model
             model = YOLO(model_path)
 
-            # Test (use split='test' if supported, else set data to self.data_yaml_path and YOLOv8 will use test set if defined)
+            # Test (use split='test' if supported
+            # else set data to self.data_yaml_path and YOLOv8 will use test set if defined)
             results = model.val(
                 data=self.data_yaml_path,
                 imgsz=self.config.IMAGE_SIZE,
