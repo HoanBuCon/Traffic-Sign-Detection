@@ -1875,7 +1875,7 @@ class RealTimeTrafficSignDetectorNLPHybrid:
             if save_video:
                 output_dir = 'real_time_output'
                 os.makedirs(output_dir, exist_ok=True)
-                video_filename = os.path.join(output_dir, f"result_hybrid_{time.strftime('%Y%m%d_%H%M%S')}.mp4")
+                video_filename = os.path.join(output_dir, f"result_hybrid_webcam_{time.strftime('%Y%m%d_%H%M%S')}.mp4")
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                 out = cv2.VideoWriter(video_filename, fourcc, fps, (width, height))
                 print(f"[INFO] Video sẽ được lưu tại: {video_filename}")
@@ -1903,11 +1903,126 @@ class RealTimeTrafficSignDetectorNLPHybrid:
             print("[ERROR] Lỗi khi chạy webcam:", e)
             traceback.print_exc()
 
+    def run_video(self, video_path, save_video=True):
+        """Chạy detection trên video file"""
+        try:
+            if not os.path.exists(video_path):
+                print(f"[ERROR] Không tìm thấy video: {video_path}")
+                return
+            
+            cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                print(f"[ERROR] Không mở được video: {video_path}")
+                return
+            
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            
+            print(f"[INFO] Video: {video_path}")
+            print(f"[INFO] Độ phân giải: {width}x{height}, FPS: {fps:.2f}, Frames: {total_frames}")
+            
+            out = None
+            if save_video:
+                output_dir = 'real_time_output'
+                os.makedirs(output_dir, exist_ok=True)
+                video_filename = os.path.join(output_dir, f"result_hybrid_video_{time.strftime('%Y%m%d_%H%M%S')}.mp4")
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                out = cv2.VideoWriter(video_filename, fourcc, fps, (width, height))
+                print(f"[INFO] Kết quả sẽ được lưu tại: {video_filename}")
+            
+            frame_count = 0
+            print("Nhấn 'q' để thoát, 'space' để tạm dừng/tiếp tục.")
+            
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    print("\n[INFO] Đã xử lý xong video!")
+                    break
+                
+                frame_count += 1
+                print(f"\r[PROCESSING] Frame {frame_count}/{total_frames} ({frame_count/total_frames*100:.1f}%)", end="")
+                
+                detections = self.predict_frame(frame)
+                frame_draw = frame.copy()
+                self.draw_and_show(frame_draw, detections)
+                
+                if out is not None:
+                    out.write(frame_draw)
+                
+                # Keyboard controls
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord('q'):
+                    print("\n[INFO] Dừng bởi người dùng.")
+                    break
+                elif key == ord(' '):  # Space để pause/resume
+                    print("\n[PAUSE] Nhấn space để tiếp tục...")
+                    while True:
+                        if cv2.waitKey(0) & 0xFF == ord(' '):
+                            break
+            
+            cap.release()
+            if out is not None:
+                out.release()
+            cv2.destroyAllWindows()
+            
+            if out is not None:
+                print(f"\n[INFO] Video kết quả đã lưu tại: {video_filename}")
+                
+        except Exception as e:
+            import traceback
+            print(f"\n[ERROR] Lỗi khi xử lý video: {e}")
+            traceback.print_exc()
+
 def main():
-    print("[DEBUG] Khởi động chương trình Hybrid CV+NLP")
-    detector = RealTimeTrafficSignDetectorNLPHybrid()
-    print("[DEBUG] Đã tạo detector Hybrid")
-    detector.run_webcam(save_video=True)
+    print("=" * 60)
+    print("🚗 TRAFFIC SIGN DETECTION - HYBRID CV+NLP SYSTEM 🚗")
+    print("=" * 60)
+    print("Chọn chế độ chạy:")
+    print("1. Webcam (Camera real-time)")
+    print("2. Video test (test_video.mov từ thư mục input)")
+    print("=" * 60)
+    
+    while True:
+        try:
+            choice = input("Nhập lựa chọn (1 hoặc 2): ").strip()
+            
+            if choice == "1":
+                print("\n[DEBUG] Khởi động chương trình Hybrid CV+NLP - Chế độ Webcam")
+                detector = RealTimeTrafficSignDetectorNLPHybrid()
+                print("[DEBUG] Đã tạo detector Hybrid")
+                detector.run_webcam(save_video=True)
+                break
+                
+            elif choice == "2":
+                # Đường dẫn video test
+                video_path = os.path.join("input", "test_video.mov")
+                
+                # Kiểm tra file tồn tại
+                if not os.path.exists(video_path):
+                    print(f"\n[ERROR] Không tìm thấy video: {video_path}")
+                    print("Vui lòng đảm bảo file test_video.mov có trong thư mục input/")
+                    continue
+                
+                print(f"\n[DEBUG] Khởi động chương trình Hybrid CV+NLP - Chế độ Video Test")
+                print(f"[DEBUG] Video: {video_path}")
+                detector = RealTimeTrafficSignDetectorNLPHybrid()
+                print("[DEBUG] Đã tạo detector Hybrid")
+                detector.run_video(video_path, save_video=True)
+                break
+                
+            else:
+                print("❌ Lựa chọn không hợp lệ! Vui lòng nhập 1 hoặc 2.")
+                continue
+                
+        except KeyboardInterrupt:
+            print("\n\n[INFO] Chương trình bị ngắt bởi người dùng.")
+            break
+        except Exception as e:
+            print(f"\n[ERROR] Lỗi: {e}")
+            continue
+    
     print("[DEBUG] Kết thúc chương trình Hybrid")
 
 if __name__ == "__main__":
