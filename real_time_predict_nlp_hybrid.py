@@ -1019,7 +1019,7 @@ class ArrowDetector:
             return "unknown", 0.0
     
     def _combine_results(self, results) -> tuple:
-        """Combine kết quả từ nhiều phương pháp với weighted voting cải thiện"""
+        """Combine kết quả từ nhiều phương pháp với weighted voting cải thiện"""    
         direction_scores = {}
         total_confidence = 0.0
         
@@ -1221,8 +1221,7 @@ class RealTimeTrafficSignDetectorNLPHybrid:
             generation_config = dict(max_new_tokens=200, do_sample=False, num_beams=3, repetition_penalty=1.3, pad_token_id=self.vintern_tokenizer.eos_token_id)
             
             # Prompt cực kỳ đơn giản
-            question = """<image>
-Đọc text"""
+            question = """<image> Đọc text"""
             
             response, history = self.vintern_model.chat(self.vintern_tokenizer, pixel_values, question, generation_config, history=None, return_history=True)
             
