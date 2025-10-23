@@ -54,68 +54,22 @@ def remove_vietnamese_diacritics(text):
     return text
 
 descriptions_vi = [
-    "Đường người đi bộ cắt ngang",
-    "Đường giao nhau (ngã ba bên phải)",
-    "Cấm đi ngược chiều",
-    "Phải đi vòng sang bên phải",
-    "Giao nhau với đường đồng cấp",
-    "Giao nhau với đường không ưu tiên",
-    "Chỗ ngoặt nguy hiểm vòng bên trái",
-    "Cấm rẽ trái",
-    "Bến xe buýt",
-    "Nơi giao nhau chạy theo vòng xuyến",
-    "Cấm dừng và đỗ xe",
-    "Chỗ quay xe",
-    "Biển gộp làn đường theo phương tiện",
-    "Đi chậm",
-    "Cấm xe tải",
-    "Đường bị thu hẹp về phía phải",
-    "Giới hạn chiều cao",
-    "Cấm quay đầu",
-    "Cấm ô tô khách và ô tô tải",
-    "Cấm rẽ phải và quay đầu",
-    "Cấm ô tô",
-    "Đường bị thu hẹp về phía trái",
-    "Gồ giảm tốc phía trước",
-    "Cấm xe hai và ba bánh",
-    "Kiểm tra",
-    "Chỉ dành cho xe máy*",
-    "Chướng ngoại vật phía trước",
-    "Trẻ em",
-    "Xe tải và xe công*",
-    "Cấm mô tô và xe máy",
-    "Chỉ dành cho xe tải*",
-    "Đường có camera giám sát",
-    "Cấm rẽ phải",
-    "Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang phải",
-    "Cấm xe sơ-mi rơ-moóc",
-    "Cấm rẽ trái và phải",
-    "Cấm đi thẳng và rẽ phải",
-    "Đường giao nhau (ngã ba bên trái)",
-    "Giới hạn tốc độ (50km/h)",
-    "Giới hạn tốc độ (60km/h)",
-    "Giới hạn tốc độ (80km/h)",
-    "Giới hạn tốc độ (40km/h)",
-    "Các xe chỉ được rẽ trái",
-    "Chiều cao tĩnh không thực tế",
-    "Nguy hiểm khác",
-    "Đường một chiều",
-    "Cấm đỗ xe",
-    "Cấm ô tô quay đầu xe (được rẽ trái)",
-    "Giao nhau với đường sắt có rào chắn",
-    "Cấm rẽ trái và quay đầu xe",
-    "Chỗ ngoặt nguy hiểm vòng bên phải",
-    "Chú ý chướng ngại vật – vòng tránh sang bên phải"
+  "Đường kẻ dành cho người đi bộ",           # i.423.b
+  "Cấm đi ngược chiều",                      # p.102
+  "Cấm xe tải trên N tấn",                   # p.106.b
+  "Cấm dừng và đỗ xe",                       # p.130
+  "Cấm đỗ xe",                               # p.131.a
+  "Tuyến đường cầu vượt cắt qua",            # r.308.b
+  "TEXT SIGN",                               # sus
+  "Cảnh báo khúc cua nguy hiểm bên trái",    # w.201.a
+  "Cảnh báo đường hẹp",                      # w.203.c
+  "Cảnh báo giao nhau với đường không ưu tiên bên phải",  # w.207.b
+  "Cảnh báo giao nhau với đường không ưu tiên bên trái",  # w.207.c
+  "Cảnh báo đến khu vực đèn tín hiệu giao thông"          # w.209
 ]
 descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
 
-class_ids = [
-    "W.301", "W.302a", "P.101a", "P.123a", "W.207", "W.208", "W.212b", "P.124a", "S.507", "W.224", "P.131a",
-    "S.407", "R.411", "P.135", "P.106a", "W.233a", "P.117a", "P.125", "P.108", "P.124b", "P.102", "W.233b",
-    "W.235", "P.109", "S.501", "R.412", "R.412a", "W.211", "W.210", "P.106b", "P.111b", "R.413", "S.510",
-    "P.124c", "W.212a", "P.111a", "P.132", "P.134", "W.302b", "P.127", "P.128", "P.129", "P.126", "R.407",
-    "P.117b", "W.245", "R.407a", "P.130", "P.131b", "P.110", "W.222", "P.124d", "W.212c", "W.212d", "W.212e"
-]
+class_ids = ['i.423.b', 'p.102', 'p.106.b', 'p.130', 'p.131.a', 'r.308.b', 'sus', 'w.201.a', 'w.203.c', 'w.207.b', 'w.207.c', 'w.209']
 
 class RealTimeTrafficSignDetectorAdvanced:
     def __init__(self, model_path=None):
