@@ -17,58 +17,18 @@ if project_root not in sys.path:
 
 # Danh sách nhãn tiếng Việt (copy từ predict.py)
 descriptions_vi = [
-    "Đường người đi bộ cắt ngang",
-    "Đường giao nhau (ngã ba bên phải)",
-    "Cấm đi ngược chiều",
-    "Phải đi vòng sang bên phải",
-    "Giao nhau với đường đồng cấp",
-    "Giao nhau với đường không ưu tiên",
-    "Chỗ ngoặt nguy hiểm vòng bên trái",
-    "Cấm rẽ trái",
-    "Bến xe buýt",
-    "Nơi giao nhau chạy theo vòng xuyến",
-    "Cấm dừng và đỗ xe",
-    "Chỗ quay xe",
-    "Biển gộp làn đường theo phương tiện",
-    "Đi chậm",
-    "Cấm xe tải",
-    "Đường bị thu hẹp về phía phải",
-    "Giới hạn chiều cao",
-    "Cấm quay đầu",
-    "Cấm ô tô khách và ô tô tải",
-    "Cấm rẽ phải và quay đầu",
-    "Cấm ô tô",
-    "Đường bị thu hẹp về phía trái",
-    "Gồ giảm tốc phía trước",
-    "Cấm xe hai và ba bánh",
-    "Kiểm tra",
-    "Chỉ dành cho xe máy*",
-    "Chướng ngoại vật phía trước",
-    "Trẻ em",
-    "Xe tải và xe công*",
-    "Cấm mô tô và xe máy",
-    "Chỉ dành cho xe tải*",
-    "Đường có camera giám sát",
-    "Cấm rẽ phải",
-    "Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang phải",
-    "Cấm xe sơ-mi rơ-moóc",
-    "Cấm rẽ trái và phải",
-    "Cấm đi thẳng và rẽ phải",
-    "Đường giao nhau (ngã ba bên trái)",
-    "Giới hạn tốc độ (50km/h)",
-    "Giới hạn tốc độ (60km/h)",
-    "Giới hạn tốc độ (80km/h)",
-    "Giới hạn tốc độ (40km/h)",
-    "Các xe chỉ được rẽ trái",
-    "Chiều cao tĩnh không thực tế",
-    "Nguy hiểm khác",
-    "Đường một chiều",
-    "Cấm đỗ xe",
-    "Cấm ô tô quay đầu xe (được rẽ trái)",
-    "Giao nhau với đường sắt có rào chắn",
-    "Cấm rẽ trái và quay đầu xe",
-    "Chỗ ngoặt nguy hiểm vòng bên phải",
-    "Chú ý chướng ngại vật – vòng tránh sang bên phải"
+  "Đường kẻ dành cho người đi bộ",           # i.423.b
+  "Cấm đi ngược chiều",                      # p.102
+  "Cấm xe tải trên N tấn",                   # p.106.b
+  "Cấm dừng và đỗ xe",                       # p.130
+  "Cấm đỗ xe",                               # p.131.a
+  "Tuyến đường cầu vượt cắt qua",            # r.308.b
+  "TEXT SIGN",                               # sus
+  "Cảnh báo khúc cua nguy hiểm bên trái",    # w.201.a
+  "Cảnh báo đường hẹp",                      # w.203.c
+  "Cảnh báo giao nhau với đường không ưu tiên bên phải",  # w.207.b
+  "Cảnh báo giao nhau với đường không ưu tiên bên trái",  # w.207.c
+  "Cảnh báo đến khu vực đèn tín hiệu giao thông"          # w.209
 ]
 
 def remove_vietnamese_diacritics(text):
@@ -217,4 +177,4 @@ def main():
     detector.run_webcam(save_video=True)
 
 if __name__ == "__main__":
-    main() 
+    main()
