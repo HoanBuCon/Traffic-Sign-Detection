@@ -17,6 +17,7 @@ ocr_log.txt
 # Dữ liệu huấn luyện và dự đoán
 dataset/
 all_weight/
+my_venv/
 
 # File tạm, cache, hệ điều hành
 __pycache__/
@@ -39,6 +40,7 @@ Thumbs.db
 venv/
 .env/
 ENV/
+.env
 
 # Ultralytics cache/settings
 *.cache

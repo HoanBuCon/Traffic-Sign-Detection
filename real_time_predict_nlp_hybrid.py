@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import os
 import sys
 import cv2
@@ -20,6 +21,19 @@ import hashlib
 import math
 from scipy.spatial.distance import euclidean
 from scipy import ndimage
+
+# Nạp file .env
+load_dotenv()
+
+# Lấy token từ .env
+hf_token = os.getenv("HF_TOKEN")
+
+# Đăng nhập tự động
+from huggingface_hub import login
+if hf_token:
+    login(hf_token)
+else:
+    print("[WARNING] Không tìm thấy Token HuggingFace trong .env")
 
 project_root = os.path.abspath(os.path.dirname(__file__))
 if project_root not in sys.path:
