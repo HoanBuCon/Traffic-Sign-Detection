@@ -3,7 +3,7 @@
 
 <div align="center">
   <a href="https://hoanbucon.id.vn" target="_blank">
-    <img src="peak_traffic_sign_detection.png" alt="Preview" />
+    <img src="./assets/peak_traffic_sign_detection.png" alt="Preview" />
   </a>
 </div>
 
