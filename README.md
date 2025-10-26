@@ -195,7 +195,7 @@ python -m src.pipeline.real_time_predict_nlp_hybrid
       <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" width="26" height="26" />
     </td>
     <td>
-      <a href="https://github.com/HoanBuCon/Traffic-Sign-Detection/blob/master/root/assets/GROUP_14_SIC_AI_Capstone_Project_Final_Report.pdf">
+      <a href="https://github.com/HoanBuCon/Traffic-Sign-Detection/raw/master/root/assets/GROUP_14_SIC_AI_Capstone_Project_Final_Report.pdf">
         <b>Project Report (PDF)</b>
       </a>
     </td>
@@ -205,7 +205,7 @@ python -m src.pipeline.real_time_predict_nlp_hybrid
       <img src="https://upload.wikimedia.org/wikipedia/commons/f/fb/.docx_icon.svg" width="26" height="26" />
     </td>
     <td>
-      <a href="https://github.com/HoanBuCon/Traffic-Sign-Detection/blob/master/root/assets/GROUP_14_SIC_AI_Capstone_Project_Final_Report.docx">
+      <a href="https://github.com/HoanBuCon/Traffic-Sign-Detection/raw/master/root/assets/GROUP_14_SIC_AI_Capstone_Project_Final_Report.docx">
         <b>Project Report (Word)</b>
       </a>
     </td>
@@ -215,7 +215,7 @@ python -m src.pipeline.real_time_predict_nlp_hybrid
       <img src="https://upload.wikimedia.org/wikipedia/commons/1/16/Microsoft_PowerPoint_2013-2019_logo.svg" width="26" height="26" />
     </td>
     <td>
-      <a href="https://github.com/HoanBuCon/Traffic-Sign-Detection/blob/master/root/assets/GROUP_14_SIC_AI_Capstone_Project_Final_Report.pptx">
+      <a href="https://github.com/HoanBuCon/Traffic-Sign-Detection/raw/master/root/assets/GROUP_14_SIC_AI_Capstone_Project_Final_Report.pptx">
         <b>Project Presentation (PPTX)</b>
       </a>
     </td>
