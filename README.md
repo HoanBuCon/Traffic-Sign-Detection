@@ -85,14 +85,14 @@ Traffic-Sign-Detection/
 └── README.md
 ```
 
-### 1️⃣. Clone the repository
+### 1️⃣ Clone the repository
 
 ```bash
 git clone https://github.com/HoanBuCon/Traffic-Sign-Detection
 cd Traffic-Sign-Detection
 ```
 
-### 2️⃣. (Optional) Create a virtual environment
+### 2️⃣ (Optional) Create a virtual environment
 ```bash
 python -m venv venv
 # Activate virtual environment
@@ -100,12 +100,12 @@ source venv/bin/activate       # Linux/macOS
 venv\Scripts\activate          # Windows
 ```
 
-### 3️⃣. Install dependencies
+### 3️⃣ Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4️⃣. Prepare dataset and config
+### 4️⃣ Prepare dataset and config
 - Dataset layout (YOLO format):
   - Images: `dataset/images/train`, `dataset/images/val`, `dataset/images/test`
   - Labels: `dataset/labels/train`, `dataset/labels/val`, `dataset/labels/test`
@@ -126,14 +126,14 @@ pip install -r requirements.txt
     `real_time_output/` (saved videos), `all_weight/` (trained weights organized as `trainX/`).
 - Place any test images you want to run in `input/`.
 
-### 5️⃣. Training
+### 5️⃣ Training
 - Ensure you have a valid dataset YAML. The project auto-detects in this order: `data/dataset/data.yaml` or `.yml`, then `data/data.yaml` or `.yml`, then repo root. You can override with env var `DATA_YAML`.
 - Open ***Terminal*** and run this script from the repo root using module mode:
 ```bash
 python -m src.training.train
 ```
 
-### 6️⃣. Detect traffic signs
+### 6️⃣ Detect traffic signs
 #### Option 1: Detect with images
 - Place the traffic signs images you want to detect into the 📁`input` folder: ```.\Traffic-Sign-Detection\data\input```
 - Open ***Terminal*** and run the detection script from the repo root:
@@ -169,18 +169,55 @@ Open ***Terminal*** and run the script for advanced real-time detection with NLP
 python -m src.pipeline.real_time_predict_nlp_hybrid
 ```
 
-### 7️⃣. Data
+### 7️⃣ Data
 
 - Detected images: ```.\Traffic-Sign-Detection\data\output```
 - Detected videos: ```.\Traffic-Sign-Detection\data\real_time_output```
 - Trained weights: ```.\Traffic-Sign-Detection\weight\all_weight```
 
-### 8️⃣. Enjoy🎉
+### 8️⃣ Enjoy🎉
 - Thank you for checking out our project! Feel free to explore, improve, or contribute 🚀
 
 <hr>
 
-<h3 align="left">Connect with us:</h3>
+### 9️⃣ Connect with us
 <p align="left">
 <a href="https://discord.gg/https://discord.gg/nckzdQE73u" target="_blank"><img align="center" src="https://upload.wikimedia.org/wikipedia/fr/4/4f/Discord_Logo_sans_texte.svg" alt="https://discord.gg/nckzdQE73u" height="30" width="40" /></a>
 </p>
+
+<hr>
+
+### 📌 Documents
+
+<table>
+  <tr>
+    <td width="40" align="center">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" width="26" height="26" />
+    </td>
+    <td>
+      <a href="https://github.com/HoanBuCon/Traffic-Sign-Detection/blob/main/root/assets/GROUP_14_SIC_AI_Capstone_Project_Final Report.pdf">
+        <b>Project Report (PDF)</b>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/f/fb/.docx_icon.svg" width="26" height="26" />
+    </td>
+    <td>
+      <a href="https://github.com/HoanBuCon/Traffic-Sign-Detection/blob/main/root/assets/GROUP_14_SIC_AI_Capstone_Project_Final Report.docx">
+        <b>Project Report (Word)</b>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/1/16/Microsoft_PowerPoint_2013-2019_logo.svg" width="26" height="26" />
+    </td>
+    <td>
+      <a href="https://github.com/HoanBuCon/Traffic-Sign-Detection/blob/main/root/assets/GROUP_14_SIC_AI_Capstone_Project_Final Report.pptx">
+        <b>Project Presentation (PPTX)</b>
+      </a>
+    </td>
+  </tr>
+</table>
