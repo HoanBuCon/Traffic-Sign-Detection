@@ -3,6 +3,9 @@ from pathlib import Path
 
 # Resolve repository root (absolute) -> .../Traffic-Sign-Detection
 REPO_ROOT = Path(__file__).resolve().parents[2]
+# Resolve weight base dir: prefer src/weight, then src/weights
+_WEIGHTS_CANDIDATES = [REPO_ROOT / 'src' / 'weight', REPO_ROOT / 'src' / 'weights']
+WEIGHT_BASE_DIR = str(next((p for p in _WEIGHTS_CANDIDATES if p.exists()), _WEIGHTS_CANDIDATES[0]))
 
 class Config:
     # Paths
@@ -51,8 +54,8 @@ class Config:
     OUTPUT_DIR = os.path.join(DATA_DIR, "output")
     INPUT_DIR = os.path.join(DATA_DIR, 'input')
     REAL_TIME_OUTPUT_DIR = os.path.join(DATA_DIR, 'real_time_output')
-    # Trained weights live under src/weight/all_weight
-    ALL_WEIGHT_DIR = os.path.join(REPO_ROOT, 'src', 'weight', 'all_weight')
+    # Trained weights live under src/weight/all_weight or src/weights/all_weight
+    ALL_WEIGHT_DIR = os.path.join(WEIGHT_BASE_DIR, 'all_weight')
     PREDICTIONS_DIR = os.path.join(OUTPUT_DIR, "predictions")
 
     # Model save (legacy placeholders; training/predict use ALL_WEIGHT_DIR)

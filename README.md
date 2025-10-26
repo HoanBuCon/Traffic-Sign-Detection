@@ -43,14 +43,56 @@
 
 <h3>Installation guide:</h3>
 
-### 1. Clone the repository
+### 📁 Project Structure
+
+```plaintext
+Traffic-Sign-Detection/
+│
+├── src/
+│   ├── core/
+│   │   └── utils.py
+│   │
+│   ├── training/
+│   │   ├── train.py
+│   │   └── config.py
+│   │
+│   ├── weight/
+│   │   └── all_weight/
+│   │       ├── trainX
+│   │       │   ├── best.pt
+│   │       │   └── last.pt
+│   │       │
+│   │       └── yolov8m.pt
+│   │
+│   ├── pipeline/
+│   │   ├── predict.py
+│   │   ├── real_time_predict.py
+│   │   ├── real_time_predict_smooth_advanced.py
+│   │   └── real_time_predict_nlp_hybrid.py
+│   │
+│   └── sort.py
+│
+├── data/
+│   ├── dataset/
+│   ├── input/
+│   ├── output/
+│   └── real_time_output/
+│
+├── assets/
+├── runs/
+├── .env
+├── requirements.txt
+└── README.md
+```
+
+### 1️⃣. Clone the repository
 
 ```bash
 git clone https://github.com/HoanBuCon/Traffic-Sign-Detection
 cd Traffic-Sign-Detection
 ```
 
-### 2. (Optional) Create a virtual environment
+### 2️⃣. (Optional) Create a virtual environment
 ```bash
 python -m venv venv
 # Activate virtual environment
@@ -58,12 +100,12 @@ source venv/bin/activate       # Linux/macOS
 venv\Scripts\activate          # Windows
 ```
 
-### 3. Install dependencies
+### 3️⃣. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Prepare dataset and config
+### 4️⃣. Prepare dataset and config
 - Dataset layout (YOLO format):
   - Images: `dataset/images/train`, `dataset/images/val`, `dataset/images/test`
   - Labels: `dataset/labels/train`, `dataset/labels/val`, `dataset/labels/test`
@@ -73,7 +115,7 @@ pip install -r requirements.txt
   python -m src.split_dataset
   ```
 - Dataset YAML (auto-detected):
-  - Preferred: `data/dataset/data.yaml` (your current setup)
+  - Preferred: `data/dataset/data.yaml` (current setup)
   - Fallbacks: `data/data.yaml`, then repo-root `data.yaml`
   - Override via env var:
   ```powershell
@@ -84,14 +126,14 @@ pip install -r requirements.txt
     `real_time_output/` (saved videos), `all_weight/` (trained weights organized as `trainX/`).
 - Place any test images you want to run in `input/`.
 
-### 5. Training
+### 5️⃣. Training
 - Ensure you have a valid dataset YAML. The project auto-detects in this order: `data/dataset/data.yaml` or `.yml`, then `data/data.yaml` or `.yml`, then repo root. You can override with env var `DATA_YAML`.
 - Open ***Terminal*** and run this script from the repo root using module mode:
 ```bash
 python -m src.training.train
 ```
 
-### 6. Detect traffic signs
+### 6️⃣. Detect traffic signs
 #### Option 1: Detect with images
 - Place the traffic signs images you want to detect into the 📁`input` folder: ```.\Traffic-Sign-Detection\data\input```
 - Open ***Terminal*** and run the detection script from the repo root:
@@ -111,12 +153,29 @@ python -m src.pipeline.real_time_predict
 python -m src.pipeline.real_time_predict_smooth_advanced
 ```
 
-### 7. Data
+#### Option 4: Real-Time Detection with Vintern NLP Hybrid Model
+
+This option enables **real-time traffic sign detection** combined with **NLP-based semantic analysis** using the Vintern model hosted on **Hugging Face**.
+
+##### ⚙️ Setup Instructions
+1. **Create a `.env` file** in the project’s root directory.  
+2. Go to [**Hugging Face Tokens**](https://huggingface.co/settings/tokens) and **generate a new Access Token**.  
+3. Add your token to the `.env` file as follows:
+   ```env
+   HF_TOKEN=your_huggingface_token_here
+   ```
+Open ***Terminal*** and run the script for advanced real-time detection with NLP Model:
+```bash
+python -m src.pipeline.real_time_predict_nlp_hybrid
+```
+
+### 7️⃣. Data
+
 - Detected images: ```.\Traffic-Sign-Detection\data\output```
 - Detected videos: ```.\Traffic-Sign-Detection\data\real_time_output```
-- Trained weights: ```.\Traffic-Sign-Detection\weights\all_weight```
+- Trained weights: ```.\Traffic-Sign-Detection\weight\all_weight```
 
-### 8. Enjoy🎉
+### 8️⃣. Enjoy🎉
 - Thank you for checking out our project! Feel free to explore, improve, or contribute 🚀
 
 <hr>

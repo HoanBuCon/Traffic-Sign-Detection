@@ -1,6 +1,25 @@
 import os
+import json
 import datetime
+from pathlib import Path
+
+repo_root = Path(__file__).resolve().parents[2]
+datasets_dir = repo_root / "data" / "dataset"
+
+# Initialize Ultralytics settings once (avoid repeated resets in spawned workers on Windows)
+if os.environ.get("YOLO_SETTINGS_INIT", "0") != "1":
+    os.environ["YOLO_DATASETS_DIR"] = str(datasets_dir)
+    from ultralytics.utils import SETTINGS
+    SETTINGS["datasets_dir"] = str(datasets_dir)
+    SETTINGS["sync"] = False
+    SETTINGS["checks"] = False
+    SETTINGS["downloads"] = False
+    os.environ["YOLO_SETTINGS_INIT"] = "1"
+    print(f"[INFO] YOLO datasets_dir set to: {datasets_dir}")
+
 from ultralytics import YOLO
+import torch
+
 try:
     from src.training.config import Config
     from src.core.utils import DataAugmentation
@@ -10,91 +29,73 @@ except ModuleNotFoundError:
     _sys.path.insert(0, str(_repo_root))
     from src.training.config import Config
     from src.core.utils import DataAugmentation
-import torch
-from pathlib import Path
-import glob
+
 
 class TrafficSignTrainer:
-    def _get_latest_best_model(self):
-        try:
-            dirs = [d for d in os.listdir(self.all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(self.all_weight_dir, d))]
-            if not dirs:
-                return None
-            dirs_sorted = sorted(dirs, key=lambda x: int(x.replace('train','')) if x.replace('train','').isdigit() else 0)
-            latest = os.path.join(self.all_weight_dir, dirs_sorted[-1], 'best.pt')
-            return latest if os.path.exists(latest) else None
-        except Exception:
-            return None
+    def _build_resolved_dataset_yaml(self, yaml_path: str) -> str:
+        import yaml
+        from pathlib import Path
 
-    def test(self, model_path: str = None):
-        """
-        Test the trained model on the test set
-        Args:
-            model_path: Path to the model to test (default: best model)
-        """
-        if model_path is None:
-            # Use latest best.pt under data/all_weight/trainX/
-            model_path = self._get_latest_best_model()
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            spec = yaml.safe_load(f) or {}
 
-        if not os.path.exists(model_path):
-            print(f"Model not found at: {model_path}")
-            return
+        base_dir = Path(yaml_path).resolve().parent
+        ds_root = base_dir / spec.get('path', '') if 'path' in spec else base_dir
 
-        try:
-            # Load the model
-            model = YOLO(model_path)
+        def resolve_split(split_key: str, value: str) -> str:
+            p = Path(value)
+            if p.is_absolute() and p.exists():
+                return str(p)
+            for candidate in [
+                ds_root / value,
+                ds_root / f"images/{split_key}",
+                ds_root / f"{split_key}/images"
+            ]:
+                if candidate.exists():
+                    return str(candidate.resolve())
+            return str(ds_root.resolve())
 
-            # Test (use split='test' if supported
-            # else set data to self.data_yaml_path and YOLOv8 will use test set if defined)
-            results = model.val(
-                data=self.data_yaml_path,
-                imgsz=self.config.IMAGE_SIZE,
-                batch=self.config.BATCH_SIZE,
-                device=0 if torch.cuda.is_available() else 'cpu',
-                split='test',
-                verbose=True
-            )
+        resolved = {
+            k: resolve_split(k, spec.get(k, ''))
+            for k in ('train', 'val', 'test') if k in spec
+        }
+        for k in ('nc', 'names', 'descriptions'):
+            if k in spec:
+                resolved[k] = spec[k]
 
-            # Print test results
-            print("\nTest Results:")
-            print(f"mAP50: {results.results_dict.get('metrics/mAP50(B)', 0):.4f}")
-            print(f"mAP50-95: {results.results_dict.get('metrics/mAP50-95(B)', 0):.4f}")
+        out_dir = Path('runs') / 'traffic_sign_detection'
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_yaml = out_dir / 'data_resolved.yaml'
+        with open(out_yaml, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(resolved, f, allow_unicode=True)
+        return str(out_yaml.resolve())
 
-            return results
-
-        except Exception as e:
-            print(f"\nError during test: {str(e)}")
-            raise
     def __init__(self):
-        """Initialize the trainer with configuration"""
         self.config = Config
         self.data_augmentation = DataAugmentation(image_size=self.config.IMAGE_SIZE)
-        # Weight directory under data/
         self.all_weight_dir = Config.ALL_WEIGHT_DIR
         os.makedirs(self.all_weight_dir, exist_ok=True)
-        
-    def get_next_train_dir(self):
-        """Tìm tên thư mục train tiếp theo trong all_weight"""
-        existing = [d for d in os.listdir(self.all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(self.all_weight_dir, d))]
-        nums = [int(d.replace('train', '')) for d in existing if d.replace('train', '').isdigit()]
-        next_num = max(nums) + 1 if nums else 1
-        return os.path.join(self.all_weight_dir, f'train{next_num}')
-        
+
     def setup_training(self):
-        """Setup training environment and create necessary files/directories"""
-        # Create necessary directories
+        """Khởi tạo môi trường train (load dataset YAML, in config, vv.)"""
+        from src.core.utils import find_data_yaml
+        import yaml
+
         self.config.create_directories()
 
-        # Locate dataset yaml (prefer environment or data/dataset)
-        from src.core.utils import find_data_yaml
+        # Tìm file data.yaml
         self.data_yaml_path = find_data_yaml()
         if not os.path.exists(self.data_yaml_path):
             raise FileNotFoundError(
-                "Dataset YAML not found. Set DATA_YAML or place data.yaml at one of: "
-                "data/dataset/data.yaml, data/data.yaml, or repo root.")
+                f"Không tìm thấy data.yaml. Đặt tại data/dataset/data.yaml hoặc config.DATA_YAML"
+            )
+
         print(f"Using dataset YAML at: {self.data_yaml_path}")
-        
-        # Print training configuration
+
+        # Sinh ra file data_resolved.yaml có đường dẫn tuyệt đối
+        self.data_yaml_resolved = self._build_resolved_dataset_yaml(self.data_yaml_path)
+
+        # In config huấn luyện
         print("\nTraining Configuration:")
         print(f"Model: {self.config.MODEL_SIZE}")
         print(f"Image Size: {self.config.IMAGE_SIZE}")
@@ -102,78 +103,69 @@ class TrafficSignTrainer:
         print(f"Epochs: {self.config.EPOCHS}")
         print(f"Learning Rate: {self.config.LEARNING_RATE}")
         print(f"Device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}")
-        
+
+    def _resolve_base_model_path(self) -> str:
+        """Tìm model .pt local, tuyệt đối không tải online"""
+        base = self.config.MODEL_SIZE
+        from src.training.config import WEIGHT_BASE_DIR
+        candidates = [
+            Path(WEIGHT_BASE_DIR) / base,
+            repo_root / "src" / "weight" / base,
+            repo_root / "src" / "weights" / base,
+            repo_root / base,
+        ]
+        for c in candidates:
+            if c.exists():
+                print(f"Found local YOLO weight: {c.resolve()}")
+                return str(c.resolve())
+        raise FileNotFoundError(
+            f"Không tìm thấy file '{base}' trong bất kỳ vị trí nào sau đây:\n"
+            + "\n".join(map(str, candidates))
+        )
+
     def train(self):
-        """Train the YOLOv8 model on traffic sign dataset"""
-        try:
-            # Load the model
-            model = YOLO(self.config.MODEL_SIZE)
-            
-            # Train the model
-            results = model.train(
-                data=self.data_yaml_path,
-                epochs=self.config.EPOCHS,
-                imgsz=self.config.IMAGE_SIZE,
-                batch=self.config.BATCH_SIZE,
-                name='traffic_sign_detection',
-                patience=50,  # Early stopping patience
-                save=True,  # Save best and last checkpoints
-                device=0 if torch.cuda.is_available() else 'cpu',
-                verbose=True,
-                
-                # Optimizer parameters
-                lr0=self.config.LEARNING_RATE,
-                weight_decay=self.config.WEIGHT_DECAY,
-                momentum=self.config.MOMENTUM,
-                
-                # Augmentation parameters
-                flipud=self.config.VERTICAL_FLIP,
-                fliplr=self.config.HORIZONTAL_FLIP,
-                mosaic=0.5,  # Mosaic augmentation
-                mixup=0.3,   # Mixup augmentation
-                degrees=self.config.ROTATION,
-                
-                # Save best model
-                save_period=10,  # Save checkpoint every 10 epochs
-                project='runs',  # Project name
-                exist_ok=True,   # Overwrite existing experiment
-                
-                # Additional parameters for better convergence
-                warmup_epochs=3.0,  # Warmup epochs
-                warmup_momentum=0.8,  # Warmup momentum
-                warmup_bias_lr=0.1,  # Warmup initial bias lr
-                box=7.5,  # Box loss gain
-                cls=0.5,  # Classification loss gain
-                dfl=1.5,  # DFL loss gain
-                close_mosaic=10,  # Close mosaic augmentation for last 10 epochs
-                workers=self.config.WORKERS,
-            )
-            
-            # Lưu best.pt và last.pt vào thư mục all_weight/trainX
-            best_model_path = os.path.join('runs', 'traffic_sign_detection', 'weights', 'best.pt')
-            last_model_path = os.path.join('runs', 'traffic_sign_detection', 'weights', 'last.pt')
-            train_dir = self.get_next_train_dir()
-            os.makedirs(train_dir, exist_ok=True)
-            if os.path.exists(best_model_path):
-                dest_best = os.path.join(train_dir, 'best.pt')
-                os.replace(best_model_path, dest_best)
-                print(f"\nBest model saved to: {dest_best}")
-            
-            if os.path.exists(last_model_path):
-                dest_last = os.path.join(train_dir, 'last.pt')
-                os.replace(last_model_path, dest_last)
-                print(f"Last model saved to: {dest_last}")
-            
-            # Print training results
-            print("\nTraining Results:")
-            print(f"Best mAP50: {results.results_dict.get('metrics/mAP50(B)', 0):.4f}")
-            print(f"Best mAP50-95: {results.results_dict.get('metrics/mAP50-95(B)', 0):.4f}")
-            
-            return results
-            
-        except Exception as e:
-            print(f"\nError during training: {str(e)}")
-            raise
+        """Train YOLOv8 an toàn, không tải model ngoài"""
+        base_model_path = self._resolve_base_model_path()
+        print(f"[INFO] Using local pretrained model: {base_model_path}")
+
+        model = YOLO(base_model_path, task="detect")
+        model.model.args["pretrained"] = False
+
+        results = model.train(
+            data=self.data_yaml_resolved,
+            epochs=self.config.EPOCHS,
+            imgsz=self.config.IMAGE_SIZE,
+            batch=self.config.BATCH_SIZE,
+            name="traffic_sign_detection",
+            device=0 if torch.cuda.is_available() else "cpu",
+            pretrained=False,
+            verbose=True,
+            lr0=self.config.LEARNING_RATE,
+            weight_decay=self.config.WEIGHT_DECAY,
+            momentum=self.config.MOMENTUM,
+            flipud=self.config.VERTICAL_FLIP,
+            fliplr=self.config.HORIZONTAL_FLIP,
+            mosaic=0.5,
+            mixup=0.3,
+            degrees=self.config.ROTATION,
+            workers=self.config.WORKERS,
+            save_period=10,
+            exist_ok=True,
+        )
+
+        best = Path("runs/traffic_sign_detection/weights/best.pt")
+        last = Path("runs/traffic_sign_detection/weights/last.pt")
+        train_dir = Path(self.all_weight_dir) / f"train_{datetime.datetime.now():%Y%m%d_%H%M%S}"
+        train_dir.mkdir(parents=True, exist_ok=True)
+
+        for src, name in [(best, "best.pt"), (last, "last.pt")]:
+            if src.exists():
+                dst = train_dir / name
+                src.replace(dst)
+                print(f"Saved {name} → {dst}")
+
+        print("\n✅ Training finished successfully!")
+        return results
     
     def validate(self, model_path: str = None):
         """
@@ -195,7 +187,7 @@ class TrafficSignTrainer:
             
             # Validate
             results = model.val(
-                data=self.data_yaml_path,
+                data=self.data_yaml_resolved,
                 imgsz=self.config.IMAGE_SIZE,
                 batch=self.config.BATCH_SIZE,
                 device=0 if torch.cuda.is_available() else 'cpu',

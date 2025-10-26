@@ -185,7 +185,7 @@ class DataAugmentation:
     def __init__(self, image_size: int = 640):
         self.image_size = image_size
         self.transform = A.Compose([
-            A.Resize(height=image_size, width=image_size, always_apply=True),
+            A.Resize(height=image_size, width=image_size),
             A.HorizontalFlip(p=0.5),
             A.Rotate(limit=15, p=0.5),
             A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),

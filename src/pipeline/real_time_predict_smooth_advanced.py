@@ -64,7 +64,8 @@ class RealTimeTrafficSignDetectorAdvanced:
             if not train_dirs:
                 import pathlib as _pl
                 repo_root = _pl.Path(__file__).resolve().parents[2]
-                candidates = [repo_root / 'src' / 'weights' / 'yolov8m.pt',
+                candidates = [repo_root / 'src' / 'weight' / 'yolov8m.pt',
+                              repo_root / 'src' / 'weights' / 'yolov8m.pt',
                               repo_root / 'weights' / 'yolov8m.pt']
                 for c in candidates:
                     if c.exists():

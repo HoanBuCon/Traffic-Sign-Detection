@@ -36,6 +36,7 @@ Thumbs.db
 
 # VSCode settings
 .vscode/
+.idea/
 
 # Python virtual environment
 venv/

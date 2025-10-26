@@ -113,7 +113,8 @@ class TrafficSignDetector:
                 import pathlib as _pl
                 repo_root = _pl.Path(__file__).resolve().parents[2]
                 # Try src/weights/yolov8m.pt then weights/yolov8m.pt
-                candidates = [repo_root / 'src' / 'weights' / 'yolov8m.pt',
+                candidates = [repo_root / 'src' / 'weight' / 'yolov8m.pt',
+                              repo_root / 'src' / 'weights' / 'yolov8m.pt',
                               repo_root / 'weights' / 'yolov8m.pt']
                 for c in candidates:
                     if c.exists():

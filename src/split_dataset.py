@@ -1,3 +1,6 @@
+# TRAIN - TEST : 80% - 20%
+# I USE TEST SET SO THIS FILE IS USELESS
+
 import os
 import random
 import shutil
