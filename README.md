@@ -63,58 +63,58 @@ venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 ```
 
-### 4. Create necessary folders
-#### ❗Before running detection or training, make sure the following folders exist inside the `Traffic-Sign-Detection` directory:
-
-- 📁 `input` — Place your input images here 
-- 📁 `output` — Detected images will be saved here
-- 📁 `real_time_output` — Detected videos will be saved here
-- 📁 `all_weight` — Folder for storing trained model weights  
-#### ❗The final path should look like:
-- ```.\Traffic-Sign-Detection\input```
-- ```.\Traffic-Sign-Detection\output```
-- ```.\Traffic-Sign-Detection\real_time_output```
-- ```.\Traffic-Sign-Detection\all_weight```
-
-```text
-└── Traffic-Sign-Detection\
-    ├── input
-    ├── output
-    ├── real_time_output
-    └── all_weight
-```
-#### ✅ Make sure these folders are created before running ```train.py``` or ```predict.py```.
+### 4. Prepare dataset and config
+- Dataset layout (YOLO format):
+  - Images: `dataset/images/train`, `dataset/images/val`, `dataset/images/test`
+  - Labels: `dataset/labels/train`, `dataset/labels/val`, `dataset/labels/test`
+- If your images/labels are flat under `dataset/`, split into train/val:
+  ```bash
+  # From repo root
+  python -m src.split_dataset
+  ```
+- Dataset YAML (auto-detected):
+  - Preferred: `data/dataset/data.yaml` (your current setup)
+  - Fallbacks: `data/data.yaml`, then repo-root `data.yaml`
+  - Override via env var:
+  ```powershell
+  $env:DATA_YAML = "data/dataset/data.yaml"
+  ```
+- Folders are auto-created at runtime; no manual setup needed:
+  - `input/` (for your images), `output/` (predictions under `output/predictX/{images,json}`),
+    `real_time_output/` (saved videos), `all_weight/` (trained weights organized as `trainX/`).
+- Place any test images you want to run in `input/`.
 
 ### 5. Training
-- Open ***Terminal*** and run this script:
+- Ensure you have a valid dataset YAML. The project auto-detects in this order: `data/dataset/data.yaml` or `.yml`, then `data/data.yaml` or `.yml`, then repo root. You can override with env var `DATA_YAML`.
+- Open ***Terminal*** and run this script from the repo root using module mode:
 ```bash
-python train.py
+python -m src.training.train
 ```
 
 ### 6. Detect traffic signs
 #### Option 1: Detect with images
-- Place the traffic signs images you want to detect into the 📁`input` folder: ```.\Traffic-Sign-Detection\input```
-- Open ***Terminal*** and run the detection script:
+- Place the traffic signs images you want to detect into the 📁`input` folder: ```.\Traffic-Sign-Detection\data\input```
+- Open ***Terminal*** and run the detection script from the repo root:
 ```bash
-python predict.py
+python -m src.pipeline.predict
 ```
 #### Option 2: Detect with real time webcam/camera
 - Open ***Terminal*** and run the script for basic real-time detection:
 ```bash
-python real_time_predict.py
+python -m src.pipeline.real_time_predict
 ```
 
 #### Option 3: Detect with real time webcam with advanced smooth
 - Make sure you have placed `sort.py` in the `src` directory.
 - Open ***Terminal*** and run the script for advanced real-time detection with SORT:
 ```bash
-python real_time_predict_smooth_advanced.py
+python -m src.pipeline.real_time_predict_smooth_advanced
 ```
 
 ### 7. Data
-- Detected images: ```.\Traffic-Sign-Detection\output```
-- Detected videos: ```.\Traffic-Sign-Detection\real_time_output```
-- Trained weights: ```.\Traffic-Sign-Detection\all_weight```
+- Detected images: ```.\Traffic-Sign-Detection\data\output```
+- Detected videos: ```.\Traffic-Sign-Detection\data\real_time_output```
+- Trained weights: ```.\Traffic-Sign-Detection\weights\all_weight```
 
 ### 8. Enjoy🎉
 - Thank you for checking out our project! Feel free to explore, improve, or contribute 🚀

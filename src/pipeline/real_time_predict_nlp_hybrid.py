@@ -6,11 +6,19 @@ import time
 from ultralytics import YOLO
 import numpy as np
 import yaml
-from config import Config
-from utils import ImageEnhancer
+try:
+    from src.training.config import Config
+    from src.core.utils import ImageEnhancer
+    from src.sort import Sort
+except ModuleNotFoundError:
+    import sys as _sys, pathlib as _pathlib
+    _repo_root = _pathlib.Path(__file__).resolve().parents[2]
+    _sys.path.insert(0, str(_repo_root))
+    from src.training.config import Config
+    from src.core.utils import ImageEnhancer
+    from src.sort import Sort
 import unicodedata
 from collections import deque, Counter
-from src.sort import Sort
 import torch
 from PIL import Image, ImageFont, ImageDraw
 import torchvision.transforms as T
@@ -35,9 +43,6 @@ if hf_token:
 else:
     print("[WARNING] Không tìm thấy Token HuggingFace trong .env")
 
-project_root = os.path.abspath(os.path.dirname(__file__))
-if project_root not in sys.path:
-    sys.path.append(project_root)
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -135,8 +140,9 @@ def load_descriptions_from_yaml(yaml_path='data.yaml'):
         print(f"[ERROR] Failed to load descriptions from {yaml_path}: {e}")
         return []
 
-# Load descriptions từ data.yaml
-descriptions_vi = load_descriptions_from_yaml()
+# Load descriptions từ data.yaml (auto-detect)
+from src.core.utils import find_data_yaml
+descriptions_vi = load_descriptions_from_yaml(find_data_yaml())
 descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
 
 def bbox_iou(box1, box2):
@@ -1070,23 +1076,40 @@ class RealTimeTrafficSignDetectorNLPHybrid:
     def __init__(self, model_path=None):
         print("[DEBUG] Init class RealTimeTrafficSignDetectorNLPHybrid")
         if model_path is None:
-            all_weight_dir = 'all_weight'
+            all_weight_dir = Config.ALL_WEIGHT_DIR
+            os.makedirs(all_weight_dir, exist_ok=True)
             train_dirs = [d for d in os.listdir(all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(all_weight_dir, d))]
             if not train_dirs:
-                raise FileNotFoundError("Không tìm thấy model đã train trong all_weight! Hãy train model trước.")
-            train_dirs_sorted = sorted(train_dirs, key=lambda x: int(x.replace('train', '')) if x.replace('train', '').isdigit() else 0)
-            latest_train_dir = os.path.join(all_weight_dir, train_dirs_sorted[-1])
-            best_pt_path = os.path.join(latest_train_dir, 'best.pt')
-            if not os.path.exists(best_pt_path):
-                raise FileNotFoundError(f"Không tìm thấy best.pt trong {latest_train_dir}!")
-            model_path = best_pt_path
-            print(f"[INFO] Sử dụng model: {model_path}")
+                import pathlib as _pl
+                repo_root = _pl.Path(__file__).resolve().parents[2]
+                candidates = [repo_root / 'src' / 'weights' / 'yolov8m.pt',
+                              repo_root / 'weights' / 'yolov8m.pt']
+                for c in candidates:
+                    if c.exists():
+                        model_path = str(c)
+                        print(f"[INFO] Không có model đã train; dùng pretrained local: {model_path}")
+                        break
+                else:
+                    raise FileNotFoundError(
+                        "Không tìm thấy weight local. Hãy đặt weight tại src/weights/all_weight/trainX/best.pt hoặc src/weights/yolov8m.pt")
+            else:
+                train_dirs_sorted = sorted(train_dirs, key=lambda x: int(x.replace('train', '')) if x.replace('train', '').isdigit() else 0)
+                latest_train_dir = os.path.join(all_weight_dir, train_dirs_sorted[-1])
+                best_pt_path = os.path.join(latest_train_dir, 'best.pt')
+                if not os.path.exists(best_pt_path):
+                    last_pt_path = os.path.join(latest_train_dir, 'last.pt')
+                    if os.path.exists(last_pt_path):
+                        best_pt_path = last_pt_path
+                model_path = best_pt_path
+                print(f"[INFO] Sử dụng model: {model_path}")
         self.model = YOLO(model_path)
         self.image_enhancer = ImageEnhancer()
         self.config = Config
-        with open('data.yaml', 'r', encoding='utf-8') as f:
+        from src.core.utils import find_data_yaml
+        with open(find_data_yaml(), 'r', encoding='utf-8') as f:
             data_yaml = yaml.safe_load(f)
             self.class_names = data_yaml.get('names', {})
+            self.descriptions_vi = data_yaml.get('descriptions', []) or []
         self.tracker = Sort(max_age=10, min_hits=3, iou_threshold=0.3)
         print("[DEBUG] Before init OCR queue/cache/label_buffers")
         self.ocr_queue = queue.Queue()
@@ -1938,7 +1961,7 @@ class RealTimeTrafficSignDetectorNLPHybrid:
             
             out = None
             if save_video:
-                output_dir = 'real_time_output'
+                output_dir = Config.REAL_TIME_OUTPUT_DIR
                 os.makedirs(output_dir, exist_ok=True)
                 video_filename = os.path.join(output_dir, f"result_hybrid_video_{time.strftime('%Y%m%d_%H%M%S')}.mp4")
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -2010,7 +2033,7 @@ def main():
                 
             elif choice == "2":
                 # Đường dẫn video test
-                video_path = os.path.join("input", "test_video.mov")
+                video_path = os.path.join(Config.INPUT_DIR, "test_video.mov")
                 
                 # Kiểm tra file tồn tại
                 if not os.path.exists(video_path):

@@ -20,6 +20,7 @@ all_weight/
 my_venv/
 
 # File tạm, cache, hệ điều hành
+**/__pycache__/
 __pycache__/
 *.pyc
 *.pyo

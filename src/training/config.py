@@ -1,5 +1,9 @@
 import os
 from pathlib import Path
+
+# Resolve repository root (absolute) -> .../Traffic-Sign-Detection
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 class Config:
     # Paths
     DATASET_PATH = "dataset"
@@ -42,23 +46,30 @@ class Config:
     GAMMA_CORRECTION = 1.2
     CONTRAST_ENHANCEMENT = 1.3
 
-    # Output
-    OUTPUT_DIR = "output"
-    INPUT_DIR = 'input'
+    # IO Paths (under repo_root/data)
+    DATA_DIR = os.path.join(REPO_ROOT, "data")
+    OUTPUT_DIR = os.path.join(DATA_DIR, "output")
+    INPUT_DIR = os.path.join(DATA_DIR, 'input')
+    REAL_TIME_OUTPUT_DIR = os.path.join(DATA_DIR, 'real_time_output')
+    # Trained weights live under src/weight/all_weight
+    ALL_WEIGHT_DIR = os.path.join(REPO_ROOT, 'src', 'weight', 'all_weight')
     PREDICTIONS_DIR = os.path.join(OUTPUT_DIR, "predictions")
 
-    # Model save
-    BEST_MODEL_PATH = "best_traffic_sign_model.pt"
-    LAST_MODEL_PATH = "last_traffic_sign_model.pt"
+    # Model save (legacy placeholders; training/predict use ALL_WEIGHT_DIR)
+    BEST_MODEL_PATH = os.path.join(ALL_WEIGHT_DIR, "best_traffic_sign_model.pt")
+    LAST_MODEL_PATH = os.path.join(ALL_WEIGHT_DIR, "last_traffic_sign_model.pt")
 
     # Workers
     WORKERS = 4
 
     @classmethod
     def create_directories(cls):
-        """Create necessary directories"""
+        """Create necessary directories under data/"""
+        os.makedirs(cls.DATA_DIR, exist_ok=True)
         os.makedirs(cls.OUTPUT_DIR, exist_ok=True)
         os.makedirs(cls.INPUT_DIR, exist_ok=True)
+        os.makedirs(cls.REAL_TIME_OUTPUT_DIR, exist_ok=True)
+        os.makedirs(cls.ALL_WEIGHT_DIR, exist_ok=True)
         os.makedirs(cls.PREDICTIONS_DIR, exist_ok=True)
 
     @classmethod

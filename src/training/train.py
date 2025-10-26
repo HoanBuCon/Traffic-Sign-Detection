@@ -1,19 +1,31 @@
 import os
-import sys
 import datetime
 from ultralytics import YOLO
-from config import Config
-from utils import DataAugmentation
+try:
+    from src.training.config import Config
+    from src.core.utils import DataAugmentation
+except ModuleNotFoundError:
+    import sys as _sys, pathlib as _pathlib
+    _repo_root = _pathlib.Path(__file__).resolve().parents[2]
+    _sys.path.insert(0, str(_repo_root))
+    from src.training.config import Config
+    from src.core.utils import DataAugmentation
 import torch
 from pathlib import Path
 import glob
 
-# Thêm thư mục gốc của project vào sys.path
-project_root = os.path.abspath(os.path.dirname(__file__))
-if project_root not in sys.path:
-    sys.path.append(project_root)
-
 class TrafficSignTrainer:
+    def _get_latest_best_model(self):
+        try:
+            dirs = [d for d in os.listdir(self.all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(self.all_weight_dir, d))]
+            if not dirs:
+                return None
+            dirs_sorted = sorted(dirs, key=lambda x: int(x.replace('train','')) if x.replace('train','').isdigit() else 0)
+            latest = os.path.join(self.all_weight_dir, dirs_sorted[-1], 'best.pt')
+            return latest if os.path.exists(latest) else None
+        except Exception:
+            return None
+
     def test(self, model_path: str = None):
         """
         Test the trained model on the test set
@@ -21,7 +33,8 @@ class TrafficSignTrainer:
             model_path: Path to the model to test (default: best model)
         """
         if model_path is None:
-            model_path = self.config.BEST_MODEL_PATH
+            # Use latest best.pt under data/all_weight/trainX/
+            model_path = self._get_latest_best_model()
 
         if not os.path.exists(model_path):
             print(f"Model not found at: {model_path}")
@@ -56,8 +69,8 @@ class TrafficSignTrainer:
         """Initialize the trainer with configuration"""
         self.config = Config
         self.data_augmentation = DataAugmentation(image_size=self.config.IMAGE_SIZE)
-        # Thêm biến đếm số lần train
-        self.all_weight_dir = 'all_weight'
+        # Weight directory under data/
+        self.all_weight_dir = Config.ALL_WEIGHT_DIR
         os.makedirs(self.all_weight_dir, exist_ok=True)
         
     def get_next_train_dir(self):
@@ -71,17 +84,16 @@ class TrafficSignTrainer:
         """Setup training environment and create necessary files/directories"""
         # Create necessary directories
         self.config.create_directories()
-        
-        # Generate dataset.yaml only if it doesn't exist
-        self.data_yaml_path = 'data.yaml'
+
+        # Locate dataset yaml (prefer environment or data/dataset)
+        from src.core.utils import find_data_yaml
+        self.data_yaml_path = find_data_yaml()
         if not os.path.exists(self.data_yaml_path):
-            dataset_content = self.config.get_dataset_yaml()
-            with open(self.data_yaml_path, 'w', encoding='utf-8') as f:
-                f.write(dataset_content)
-            print(f"Created new data.yaml file at: {self.data_yaml_path}")
-        else:
-            print(f"Using existing data.yaml file at: {self.data_yaml_path}")
-            
+            raise FileNotFoundError(
+                "Dataset YAML not found. Set DATA_YAML or place data.yaml at one of: "
+                "data/dataset/data.yaml, data/data.yaml, or repo root.")
+        print(f"Using dataset YAML at: {self.data_yaml_path}")
+        
         # Print training configuration
         print("\nTraining Configuration:")
         print(f"Model: {self.config.MODEL_SIZE}")
@@ -171,7 +183,7 @@ class TrafficSignTrainer:
             model_path: Path to the model to validate (default: best model)
         """
         if model_path is None:
-            model_path = self.config.BEST_MODEL_PATH
+            model_path = self._get_latest_best_model()
             
         if not os.path.exists(model_path):
             print(f"Model not found at: {model_path}")

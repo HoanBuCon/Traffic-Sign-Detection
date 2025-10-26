@@ -9,6 +9,7 @@ from skimage import exposure
 from scipy.ndimage import gaussian_filter
 import json
 import unicodedata
+import yaml
 
 class ImageEnhancer:
     """Class for enhancing image quality for better detection"""
@@ -421,79 +422,71 @@ class FileUtils:
     @staticmethod
     def create_dataset_yaml(dataset_path: str, output_path: str = "dataset.yaml"):
         """
-        Create dataset.yaml file
+        Create a YOLO dataset YAML file and auto-align descriptions with an existing data.yaml.
         
         Args:
-            dataset_path: Path to dataset
-            output_path: Output yaml file path
+            dataset_path: Path to dataset root (folder containing images/ and labels/)
+            output_path: Output yaml file path (default: dataset.yaml in CWD)
         """
-        yaml_content = f"""# Dataset configuration
-path: ./dataset
-train: images/train
-val: images/val
+        # Try to reuse class names and descriptions from existing data.yaml
+        try:
+            from src.core.utils import find_data_yaml  # safe self-import when packaged
+        except Exception:
+            # Fallback when imported as a script
+            from .utils import find_data_yaml  # type: ignore
+        base_yaml_path = find_data_yaml()
+        base = {}
+        if os.path.exists(base_yaml_path):
+            try:
+                with open(base_yaml_path, 'r', encoding='utf-8') as f:
+                    base = yaml.safe_load(f) or {}
+            except Exception:
+                base = {}
+        names = base.get('names') if isinstance(base.get('names'), (list, dict)) else None
+        descriptions = base.get('descriptions') if isinstance(base.get('descriptions'), list) else None
 
-# Number of classes
-nc: 43  # Adjust based on your traffic sign classes
+        # If names is a dict, convert to list ordered by index if possible
+        if isinstance(names, dict):
+            try:
+                names = [names[str(i)] if str(i) in names else names[i] for i in range(len(names))]
+            except Exception:
+                names = list(names.values())
 
-# Class names (example - adjust based on your dataset)
-names:
-Đường người đi bộ cắt ngang
-Đường giao nhau (ngã ba bên phải)
-Cấm đi ngược chiều
-Phải đi vòng sang bên phải
-Giao nhau với đường đồng cấp
-Giao nhau với đường không ưu tiên
-Chỗ ngoặt nguy hiểm vòng bên trái
-Cấm rẽ trái
-Bến xe buýt
-Nơi giao nhau chạy theo vòng xuyến
-Cấm dừng và đỗ xe
-Chỗ quay xe
-Biển gộp làn đường theo phương tiện
-Đi chậm
-Cấm xe tải
-Đường bị thu hẹp về phía phải
-Giới hạn chiều cao
-Cấm quay đầu
-Cấm ô tô khách và ô tô tải
-Cấm rẽ phải và quay đầu
-Cấm ô tô
-Đường bị thu hẹp về phía trái
-Gồ giảm tốc phía trước
-Cấm xe hai và ba bánh
-Kiểm tra
-Chỉ dành cho xe máy*
-Chướng ngoại vật phía trước
-Trẻ em
-Xe tải và xe công*
-Cấm mô tô và xe máy
-Chỉ dành cho xe tải*
-Đường có camera giám sát
-Cấm rẽ phải
-Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang phải
-Cấm xe sơ-mi rơ-moóc
-Cấm rẽ trái và phải
-Cấm đi thẳng và rẽ phải
-Đường giao nhau (ngã ba bên trái)
-Giới hạn tốc độ (50km/h)
-Giới hạn tốc độ (60km/h)
-Giới hạn tốc độ (80km/h)
-Giới hạn tốc độ (40km/h)
-Các xe chỉ được rẽ trái
-Chiều cao tĩnh không thực tế
-Nguy hiểm khác
-Đường một chiều
-Cấm đỗ xe
-Cấm ô tô quay đầu xe (được rẽ trái)
-Giao nhau với đường sắt có rào chắn
-Cấm rẽ trái và quay đầu xe
-Chỗ ngoặt nguy hiểm vòng bên phải
-Chú ý chướng ngại vật – vòng tránh sang bên phải
-"""
+        # Align descriptions length to names
+        if isinstance(names, list) and descriptions:
+            if len(descriptions) != len(names):
+                # Truncate or pad with empty strings to match
+                if len(descriptions) > len(names):
+                    descriptions = descriptions[:len(names)]
+                else:
+                    descriptions = descriptions + ["" for _ in range(len(names) - len(descriptions))]
+        elif not descriptions:
+            descriptions = []
+
+        data = {
+            'path': dataset_path,
+            'train': 'images/train',
+            'val': 'images/val',
+        }
+        # Include test if exists
+        if os.path.exists(os.path.join(dataset_path, 'images', 'test')):
+            data['test'] = 'images/test'
+
+        # Class metadata
+        if isinstance(names, list):
+            data['nc'] = len(names)
+            data['names'] = names
+            if descriptions:
+                data['descriptions'] = descriptions
+        elif isinstance(base.get('nc'), int):
+            data['nc'] = base['nc']
+            if base.get('names') is not None:
+                data['names'] = base['names']
+            if base.get('descriptions') is not None:
+                data['descriptions'] = base['descriptions']
         
-        with open(output_path, 'w') as f:
-            f.write(yaml_content)
-        
+        with open(output_path, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
         print(f"Created dataset.yaml at: {output_path}")
 
 def to_ascii_label(s):
@@ -504,3 +497,28 @@ def to_ascii_label(s):
 
 IMAGE_DIR = os.path.abspath("./dataset/images")
 LABEL_DIR = os.path.abspath("./dataset/labels") 
+
+def find_data_yaml() -> str:
+    """Locate dataset YAML path.
+    Order of precedence:
+    1) DATA_YAML environment variable
+    2) data/dataset/data.yaml or data/dataset/data.yml
+    3) data/data.yaml or data/data.yml
+    4) data.yaml or data.yml at repo root
+    Returns the first existing path; if none exists, returns 'data.yaml'.
+    """
+    import os
+    env_path = os.environ.get("DATA_YAML")
+    candidates = [
+        env_path,
+        os.path.join("data", "dataset", "data.yaml"),
+        os.path.join("data", "dataset", "data.yml"),
+        os.path.join("data", "data.yaml"),
+        os.path.join("data", "data.yml"),
+        "data.yaml",
+        "data.yml",
+    ]
+    for p in candidates:
+        if p and os.path.exists(p):
+            return p
+    return "data.yaml"

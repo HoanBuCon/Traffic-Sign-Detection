@@ -1,35 +1,20 @@
 import os
-import sys
 import cv2
 import time
 from ultralytics import YOLO
 import numpy as np
 import yaml
-from config import Config
-from utils import ImageEnhancer, VisualizationUtils
+try:
+    from src.training.config import Config
+    from src.core.utils import ImageEnhancer, VisualizationUtils
+except ModuleNotFoundError:
+    import sys as _sys, pathlib as _pathlib
+    _repo_root = _pathlib.Path(__file__).resolve().parents[2]
+    _sys.path.insert(0, str(_repo_root))
+    from src.training.config import Config
+    from src.core.utils import ImageEnhancer, VisualizationUtils
 import unicodedata
 from collections import deque, Counter
-
-# Thêm thư mục gốc của project vào sys.path để xử lý relative imports
-project_root = os.path.abspath(os.path.dirname(__file__))
-if project_root not in sys.path:
-    sys.path.append(project_root)
-
-# Danh sách nhãn tiếng Việt (copy từ predict.py)
-descriptions_vi = [
-  "Đường kẻ dành cho người đi bộ",           # i.423.b
-  "Cấm đi ngược chiều",                      # p.102
-  "Cấm xe tải trên N tấn",                   # p.106.b
-  "Cấm dừng và đỗ xe",                       # p.130
-  "Cấm đỗ xe",                               # p.131.a
-  "Tuyến đường cầu vượt cắt qua",            # r.308.b
-  "TEXT SIGN",                               # sus
-  "Cảnh báo khúc cua nguy hiểm bên trái",    # w.201.a
-  "Cảnh báo đường hẹp",                      # w.203.c
-  "Cảnh báo giao nhau với đường không ưu tiên bên phải",  # w.207.b
-  "Cảnh báo giao nhau với đường không ưu tiên bên trái",  # w.207.c
-  "Cảnh báo đến khu vực đèn tín hiệu giao thông"          # w.209
-]
 
 def remove_vietnamese_diacritics(text):
     text = unicodedata.normalize('NFD', text)
@@ -46,31 +31,50 @@ def remove_vietnamese_diacritics(text):
     text = text.replace('__', '_')
     return text
 
-descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in descriptions_vi]
 
 class RealTimeTrafficSignDetector:
     def __init__(self, model_path=None):
         if model_path is None:
-            # Tìm model mới nhất trong all_weight
-            all_weight_dir = 'all_weight'
+            # Tìm model mới nhất trong data/all_weight
+            all_weight_dir = Config.ALL_WEIGHT_DIR
+            os.makedirs(all_weight_dir, exist_ok=True)
             train_dirs = [d for d in os.listdir(all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(all_weight_dir, d))]
             if not train_dirs:
-                raise FileNotFoundError("Không tìm thấy model đã train trong all_weight! Hãy train model trước.")
-            train_dirs_sorted = sorted(train_dirs, key=lambda x: int(x.replace('train', '')) if x.replace('train', '').isdigit() else 0)
-            latest_train_dir = os.path.join(all_weight_dir, train_dirs_sorted[-1])
-            best_pt_path = os.path.join(latest_train_dir, 'best.pt')
-            if not os.path.exists(best_pt_path):
-                raise FileNotFoundError(f"Không tìm thấy best.pt trong {latest_train_dir}!")
-            model_path = best_pt_path
-            print(f"[INFO] Sử dụng model: {model_path}")
+                import pathlib as _pl
+                repo_root = _pl.Path(__file__).resolve().parents[2]
+                candidates = [repo_root / 'src' / 'weights' / 'yolov8m.pt',
+                              repo_root / 'weights' / 'yolov8m.pt']
+                for c in candidates:
+                    if c.exists():
+                        model_path = str(c)
+                        print(f"[INFO] Không có model đã train; dùng pretrained local: {model_path}")
+                        break
+                else:
+                    raise FileNotFoundError(
+                        "Không tìm thấy weight local. Hãy đặt weight tại src/weights/all_weight/trainX/best.pt hoặc src/weights/yolov8m.pt")
+            else:
+                train_dirs_sorted = sorted(train_dirs, key=lambda x: int(x.replace('train', '')) if x.replace('train', '').isdigit() else 0)
+                latest_train_dir = os.path.join(all_weight_dir, train_dirs_sorted[-1])
+                best_pt_path = os.path.join(latest_train_dir, 'best.pt')
+                if not os.path.exists(best_pt_path):
+                    last_pt_path = os.path.join(latest_train_dir, 'last.pt')
+                    if os.path.exists(last_pt_path):
+                        best_pt_path = last_pt_path
+                model_path = best_pt_path
+                print(f"[INFO] Sử dụng model: {model_path}")
         self.model = YOLO(model_path)
         self.image_enhancer = ImageEnhancer()
         self.config = Config
-        # Đọc class_names từ data.yaml
-        data_yaml_path = 'data.yaml'
+        # Đọc class_names từ data.yaml (auto-detect)
+        from src.core.utils import find_data_yaml
+        data_yaml_path = find_data_yaml()
         with open(data_yaml_path, 'r', encoding='utf-8') as f:
             data_yaml = yaml.safe_load(f)
             self.class_names = data_yaml.get('names', {})
+            # Load Vietnamese descriptions aligned by index
+            self.descriptions_vi = data_yaml.get('descriptions', []) or []
+        # Precompute no-diacritics descriptions for filenames/overlays
+        self.descriptions_vi_no_diacritics = [remove_vietnamese_diacritics(desc) for desc in self.descriptions_vi]
         self.label_buffers = {}  # Buffer cho từng object theo class_idx, key là class_idx, value là deque
         self.buffer_size = 5     # Số frame để voting
 
@@ -106,8 +110,13 @@ class RealTimeTrafficSignDetector:
                 class_idx = int(box.cls)
                 # Làm mượt nhãn theo class_idx (vì không tracking object)
                 class_idx_smooth = self.smooth_label(class_idx, class_idx)
-                class_label = self.class_names[class_idx_smooth] if isinstance(self.class_names, list) and class_idx_smooth < len(self.class_names) else str(class_idx_smooth)
-                class_label_vi = descriptions_vi_no_diacritics[class_idx_smooth] if class_idx_smooth < len(descriptions_vi_no_diacritics) else class_label
+                if isinstance(self.class_names, dict):
+                    class_label = self.class_names.get(class_idx_smooth, self.class_names.get(str(class_idx_smooth), str(class_idx_smooth)))
+                elif isinstance(self.class_names, list) and class_idx_smooth < len(self.class_names):
+                    class_label = self.class_names[class_idx_smooth]
+                else:
+                    class_label = str(class_idx_smooth)
+                class_label_vi = self.descriptions_vi_no_diacritics[class_idx_smooth] if class_idx_smooth < len(self.descriptions_vi_no_diacritics) else class_label
                 detection = {
                     'bbox': box.xyxy[0].tolist(),
                     'confidence': float(box.conf),
@@ -140,7 +149,7 @@ class RealTimeTrafficSignDetector:
             fps = 20
         out = None
         if save_video:
-            output_dir = 'real_time_output'
+            output_dir = Config.REAL_TIME_OUTPUT_DIR
             os.makedirs(output_dir, exist_ok=True)
             video_filename = os.path.join(output_dir, f"result_{time.strftime('%Y%m%d_%H%M%S')}.mp4")
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')

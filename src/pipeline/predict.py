@@ -1,24 +1,27 @@
 import os
-import sys
 import cv2
 import torch
 from ultralytics import YOLO
 from pathlib import Path
 from typing import List, Union, Tuple
 import numpy as np
-from config import Config
-from utils import ImageEnhancer, VisualizationUtils, FileUtils
+try:
+    from src.training.config import Config
+    from src.core.utils import ImageEnhancer, VisualizationUtils, FileUtils
+except ModuleNotFoundError:
+    import sys as _sys, pathlib as _pathlib
+    _repo_root = _pathlib.Path(__file__).resolve().parents[2]
+    _sys.path.insert(0, str(_repo_root))
+    from src.training.config import Config
+    from src.core.utils import ImageEnhancer, VisualizationUtils, FileUtils
 import glob
 import yaml
 import unicodedata
 
-# Thêm thư mục gốc của project vào sys.path
-project_root = os.path.abspath(os.path.dirname(__file__))
-if project_root not in sys.path:
-    sys.path.append(project_root)
-
 # Hàm tạo thư mục predict mới
-def get_new_predict_dir(base_dir="output"):
+def get_new_predict_dir(base_dir=None):
+    if base_dir is None:
+        base_dir = Config.OUTPUT_DIR
     i = 1
     while True:
         predict_dir = os.path.join(base_dir, f"predict{i}")
@@ -101,19 +104,38 @@ class TrafficSignDetector:
             predictions_dir: Directory to save predictions (if None, auto-create new folder)
         """
         if model_path is None:
-            # Tìm thư mục trainX mới nhất trong all_weight
-            all_weight_dir = 'all_weight'
+            # Tìm thư mục trainX mới nhất trong data/all_weight
+            all_weight_dir = Config.ALL_WEIGHT_DIR
+            os.makedirs(all_weight_dir, exist_ok=True)
             train_dirs = [d for d in os.listdir(all_weight_dir) if d.startswith('train') and os.path.isdir(os.path.join(all_weight_dir, d))]
             if not train_dirs:
-                raise FileNotFoundError("No trained model found in all_weight! Please train the model first.")
-            # Sắp xếp theo số thứ tự tăng dần
-            train_dirs_sorted = sorted(train_dirs, key=lambda x: int(x.replace('train', '')) if x.replace('train', '').isdigit() else 0)
-            latest_train_dir = os.path.join(all_weight_dir, train_dirs_sorted[-1])
-            best_pt_path = os.path.join(latest_train_dir, 'best.pt')
-            if not os.path.exists(best_pt_path):
-                raise FileNotFoundError(f"No best.pt found in {latest_train_dir}!")
-            model_path = best_pt_path
-            print(f"[INFO] Using latest best.pt: {model_path}")
+                # Fallback to local pretrained only; do NOT download
+                import pathlib as _pl
+                repo_root = _pl.Path(__file__).resolve().parents[2]
+                # Try src/weights/yolov8m.pt then weights/yolov8m.pt
+                candidates = [repo_root / 'src' / 'weights' / 'yolov8m.pt',
+                              repo_root / 'weights' / 'yolov8m.pt']
+                for c in candidates:
+                    if c.exists():
+                        model_path = str(c)
+                        print(f"[INFO] No trained model found; using local pretrained: {model_path}")
+                        break
+                else:
+                    raise FileNotFoundError(
+                        "No trained weights under src/weights/all_weight and no local pretrained found. "
+                        "Please place a trained model at src/weights/all_weight/trainX/best.pt or a pretrained at src/weights/yolov8m.pt.")
+            else:
+                # Sắp xếp theo số thứ tự tăng dần
+                train_dirs_sorted = sorted(train_dirs, key=lambda x: int(x.replace('train', '')) if x.replace('train', '').isdigit() else 0)
+                latest_train_dir = os.path.join(all_weight_dir, train_dirs_sorted[-1])
+                best_pt_path = os.path.join(latest_train_dir, 'best.pt')
+                if not os.path.exists(best_pt_path):
+                    print(f"[WARN] No best.pt found in {latest_train_dir}, using last fallback if available")
+                    last_pt_path = os.path.join(latest_train_dir, 'last.pt')
+                    if os.path.exists(last_pt_path):
+                        best_pt_path = last_pt_path
+                model_path = best_pt_path
+                print(f"[INFO] Using weight: {model_path}")
         self.model = YOLO(model_path)
         self.image_enhancer = ImageEnhancer()
         self.config = Config
@@ -123,8 +145,9 @@ class TrafficSignDetector:
             self.predictions_dir = predictions_dir
         print(f"[INFO] Saving predictions to: {self.predictions_dir}")
         
-        # Đọc class_names từ data.yaml
-        data_yaml_path = 'data.yaml' # File data.yaml nằm ở thư mục gốc
+        # Đọc class_names từ data.yaml (auto-detect path)
+        from src.core.utils import find_data_yaml
+        data_yaml_path = find_data_yaml()
         with open(data_yaml_path, 'r', encoding='utf-8') as f:
             data_yaml = yaml.safe_load(f)
             self.class_names = data_yaml.get('names', {})
@@ -200,7 +223,12 @@ class TrafficSignDetector:
             boxes = result.boxes
             for box in boxes:
                 class_idx = int(box.cls)
-                class_label = self.class_names[class_idx] if isinstance(self.class_names, list) and class_idx < len(self.class_names) else str(class_idx)
+                if isinstance(self.class_names, dict):
+                    class_label = self.class_names.get(class_idx, self.class_names.get(str(class_idx), str(class_idx)))
+                elif isinstance(self.class_names, list) and class_idx < len(self.class_names):
+                    class_label = self.class_names[class_idx]
+                else:
+                    class_label = str(class_idx)
                 
                 # Sử dụng description có dấu cho hiển thị và không dấu cho lưu file
                 global descriptions_vi
