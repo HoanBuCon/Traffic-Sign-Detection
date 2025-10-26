@@ -11,6 +11,18 @@ runs/
 logs/
 ocr_log.txt
 
+# Ignore mọi file ảnh mới trong data/input/
+data/input/*
+data/output/*
+data/real_time_output/*
+
+# Nhưng vẫn giữ các ảnh demo đã commit
+!data/input/test_video.mov
+!data/input/yes_king.jpg
+!data/output/predict1/images/yes_king.jpg
+!data/real_time_output/dont_make_me_hard.mp4
+!data/real_time_output/dubi_dubi_doo.mp4
+
 # Dữ liệu huấn luyện và dự đoán
 dataset/
 all_weight/
