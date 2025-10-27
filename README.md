@@ -126,57 +126,7 @@ pip install -r requirements.txt
     `real_time_output/` (saved videos), `all_weight/` (trained weights organized as `trainX/`).
 - Place any test images you want to run in `input/`.
 
-### 5️⃣ Training
-- Ensure you have a valid dataset YAML. The project auto-detects in this order: `data/dataset/data.yaml` or `.yml`, then `data/data.yaml` or `.yml`, then repo root. You can override with env var `DATA_YAML`.
-- Open ***Terminal*** and run this script from the repo root using module mode:
-```bash
-python -m src.training.train
-```
-
-### 6️⃣ Detect traffic signs
-#### Option 1: Detect with images
-- Place the traffic signs images you want to detect into the 📁`input` folder: ```.\Traffic-Sign-Detection\data\input```
-- Open ***Terminal*** and run the detection script from the repo root:
-```bash
-python -m src.pipeline.predict
-```
-#### Option 2: Detect with real time webcam/camera
-- Open ***Terminal*** and run the script for basic real-time detection:
-```bash
-python -m src.pipeline.real_time_predict
-```
-
-#### Option 3: Detect with real time webcam with advanced smooth
-- Make sure you have placed `sort.py` in the `src` directory.
-- Open ***Terminal*** and run the script for advanced real-time detection with SORT:
-```bash
-python -m src.pipeline.real_time_predict_smooth_advanced
-```
-
-#### Option 4: Real-Time Detection with Vintern NLP Hybrid Model
-
-- This option enables **real-time traffic sign detection** combined with **NLP-based semantic analysis** using the Vintern model hosted on **Hugging Face**.
-
-- **⚙️ Setup Instructions**
-1. **Create a `.env` file** in the project’s root directory.  
-2. Go to [**Hugging Face Tokens**](https://huggingface.co/settings/tokens) and **generate a new Access Token**.  
-3. Add your token to the `.env` file as follows:
-
-   ```env
-   HF_TOKEN=your_huggingface_token_here
-   ```
-- Open ***Terminal*** and run the script for advanced real-time detection with NLP Model:
-```bash
-python -m src.pipeline.real_time_predict_nlp_hybrid
-```
-
-### 7️⃣ Data
-
-- Detected images: ```.\Traffic-Sign-Detection\data\output```
-- Detected videos: ```.\Traffic-Sign-Detection\data\real_time_output```
-- Trained weights: ```.\Traffic-Sign-Detection\weight\all_weight```
-
-### 8️⃣ (Optional) Use Pre-trained Weights to Run the Project
+### 5️⃣ (Optional) Use Pre-trained Weights to Run the Project
 
 - Instead of retraining the model from scratch, you can use our **pre-trained YOLOv8 weights** trained on a **12-class traffic sign dataset** available here:  
 - 👉 [Download Pre-trained Weight (Google Drive)](https://drive.google.com/file/d/1_eRbBX8Ne6Lk8B2yN1sHtHIQ387DVjfF/view?usp=sharing)
@@ -235,6 +185,56 @@ roboflow:
   license: CC BY 4.0
   url: https://universe.roboflow.com/traffic-sign-detection-hzj9m/traffic-sign-detection-e1j1v/dataset/4
 ```
+
+### 6️⃣ Training
+- Ensure you have a valid dataset YAML. The project auto-detects in this order: `data/dataset/data.yaml` or `.yml`, then `data/data.yaml` or `.yml`, then repo root. You can override with env var `DATA_YAML`.
+- Open ***Terminal*** and run this script from the repo root using module mode:
+```bash
+python -m src.training.train
+```
+
+### 7️⃣ Detect traffic signs
+#### Option 1: Detect with images
+- Place the traffic signs images you want to detect into the 📁`input` folder: ```.\Traffic-Sign-Detection\data\input```
+- Open ***Terminal*** and run the detection script from the repo root:
+```bash
+python -m src.pipeline.predict
+```
+#### Option 2: Detect with real time webcam/camera
+- Open ***Terminal*** and run the script for basic real-time detection:
+```bash
+python -m src.pipeline.real_time_predict
+```
+
+#### Option 3: Detect with real time webcam with advanced smooth
+- Make sure you have placed `sort.py` in the `src` directory.
+- Open ***Terminal*** and run the script for advanced real-time detection with SORT:
+```bash
+python -m src.pipeline.real_time_predict_smooth_advanced
+```
+
+#### Option 4: Real-Time Detection with Vintern NLP Hybrid Model
+
+- This option enables **real-time traffic sign detection** combined with **NLP-based semantic analysis** using the Vintern model hosted on **Hugging Face**.
+
+- **⚙️ Setup Instructions**
+1. **Create a `.env` file** in the project’s root directory.  
+2. Go to [**Hugging Face Tokens**](https://huggingface.co/settings/tokens) and **generate a new Access Token**.  
+3. Add your token to the `.env` file as follows:
+
+   ```env
+   HF_TOKEN=your_huggingface_token_here
+   ```
+- Open ***Terminal*** and run the script for advanced real-time detection with NLP Model:
+```bash
+python -m src.pipeline.real_time_predict_nlp_hybrid
+```
+
+### 8️⃣ Data
+
+- Detected images: ```.\Traffic-Sign-Detection\data\output```
+- Detected videos: ```.\Traffic-Sign-Detection\data\real_time_output```
+- Trained weights: ```.\Traffic-Sign-Detection\weight\all_weight```
 
 ### 9️⃣ Enjoy🎉
 - Thank you for checking out our project! Feel free to explore, improve, or contribute 🚀
