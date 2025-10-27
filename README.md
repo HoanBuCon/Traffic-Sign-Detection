@@ -155,16 +155,17 @@ python -m src.pipeline.real_time_predict_smooth_advanced
 
 #### Option 4: Real-Time Detection with Vintern NLP Hybrid Model
 
-This option enables **real-time traffic sign detection** combined with **NLP-based semantic analysis** using the Vintern model hosted on **Hugging Face**.
+- This option enables **real-time traffic sign detection** combined with **NLP-based semantic analysis** using the Vintern model hosted on **Hugging Face**.
 
-##### ⚙️ Setup Instructions
+- **⚙️ Setup Instructions**
 1. **Create a `.env` file** in the project’s root directory.  
 2. Go to [**Hugging Face Tokens**](https://huggingface.co/settings/tokens) and **generate a new Access Token**.  
 3. Add your token to the `.env` file as follows:
+
    ```env
    HF_TOKEN=your_huggingface_token_here
    ```
-Open ***Terminal*** and run the script for advanced real-time detection with NLP Model:
+- Open ***Terminal*** and run the script for advanced real-time detection with NLP Model:
 ```bash
 python -m src.pipeline.real_time_predict_nlp_hybrid
 ```
