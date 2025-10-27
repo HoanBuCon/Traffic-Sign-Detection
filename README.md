@@ -154,7 +154,7 @@ Traffic-Sign-Detection/
         └── data.yaml ← (PLACE HERE)
 ```
 
-- 📄 `data.yaml`:
+- 📄 `data.yaml`
 ```yaml
 train: ./train/images
 val: ./val/images
