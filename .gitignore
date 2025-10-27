@@ -22,6 +22,7 @@ data/real_time_output/*
 !data/output/predict1/images/yes_king.jpg
 !data/real_time_output/dont_make_me_hard.mp4
 !data/real_time_output/dubi_dubi_doo.mp4
+!data/dataset/data.yaml
 
 # Dữ liệu huấn luyện và dự đoán
 dataset/
