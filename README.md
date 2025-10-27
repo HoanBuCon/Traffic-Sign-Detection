@@ -176,12 +176,72 @@ python -m src.pipeline.real_time_predict_nlp_hybrid
 - Detected videos: ```.\Traffic-Sign-Detection\data\real_time_output```
 - Trained weights: ```.\Traffic-Sign-Detection\weight\all_weight```
 
-### 8️⃣ Enjoy🎉
+### 8️⃣ (Optional) Use Pre-trained Weights to Run the Project
+
+- Instead of retraining the model from scratch, you can use our **pre-trained YOLOv8 weights** trained on a **12-class traffic sign dataset** available here:  
+- 👉 [Download Pre-trained Weight (Google Drive)](https://drive.google.com/file/d/1_eRbBX8Ne6Lk8B2yN1sHtHIQ387DVjfF/view?usp=sharing)
+
+⚠️ After downloading, place the weight files in the following directory structure `.\Traffic-Sign-Detection\weight\all_weight`:
+```plaintext
+Traffic-Sign-Detection/
+└── src/
+    └── weight/
+        └── all_weight/ ← (PLACE HERE)
+            ├── trainX
+            │   ├── best.pt
+            │   └── last.pt
+            │
+            └── yolov8m.pt
+```
+
+⚠️ Before running the project, make sure you have created the `data.yaml` file in the correct path as specified in section ***4️⃣ Prepare dataset and config***, and paste the following content:
+
+- 📁 **Path**: `.\Traffic-Sign-Detection\data\dataset\data.yaml`
+```plaintext
+Traffic-Sign-Detection/
+└── data/
+    └── dataset/
+        └── data.yaml ← (PLACE HERE)
+```
+
+- 📄 `data.yaml`:
+```yaml
+train: ./train/images
+val: ./val/images
+test: ./test/images
+
+nc: 12
+names: ['i.423.b', 'p.102', 'p.106.b', 'p.130', 'p.131.a', 'r.308.b', 'sus', 'w.201.a', 'w.203.c', 'w.207.b', 'w.207.c', 'w.209']
+
+descriptions: [
+  'Đường kẻ dành cho người đi bộ',                        # i.423.b
+  'Cấm đi ngược chiều',                                   # p.102
+  'Cấm xe tải trên N tấn',                                # p.106.b
+  'Cấm dừng và đỗ xe',                                    # p.130
+  'Cấm đỗ xe',                                            # p.131.a
+  'Tuyến đường cầu vượt cắt qua',                         # r.308.b
+  'TEXT SIGN',                                            # sus
+  'Cảnh báo khúc cua nguy hiểm bên trái',                 # w.201.a
+  'Cảnh báo đường hẹp',                                   # w.203.c
+  'Cảnh báo giao nhau với đường không ưu tiên bên phải',  # w.207.b
+  'Cảnh báo giao nhau với đường không ưu tiên bên trái',  # w.207.c
+  'Cảnh báo đến khu vực đèn tín hiệu giao thông'          # w.209
+]
+
+roboflow:
+  workspace: traffic-sign-detection-hzj9m
+  project: traffic-sign-detection-e1j1v
+  version: 4
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/traffic-sign-detection-hzj9m/traffic-sign-detection-e1j1v/dataset/4
+```
+
+### 9️⃣ Enjoy🎉
 - Thank you for checking out our project! Feel free to explore, improve, or contribute 🚀
 
 <hr>
 
-### 9️⃣ Connect with us
+### 🌐 Connect with us
 <p align="left">
 <a href="https://discord.gg/https://discord.gg/nckzdQE73u" target="_blank"><img align="center" src="https://upload.wikimedia.org/wikipedia/fr/4/4f/Discord_Logo_sans_texte.svg" alt="https://discord.gg/nckzdQE73u" height="30" width="40" /></a>
 </p>
