@@ -136,12 +136,12 @@ pip install -r requirements.txt
 Traffic-Sign-Detection/
 └── src/
     └── weight/
-        └── all_weight/ ← (PLACE HERE)
-            ├── trainX
-            │   ├── best.pt
-            │   └── last.pt
-            │
-            └── yolov8m.pt
+        ├── all_weight/ ← (PLACE HERE)
+        │   └── trainX
+        │       ├── best.pt
+        │       └── last.pt
+        │   
+        └── yolov8m.pt
 ```
 
 ⚠️ Before running the project, make sure you have created the `data.yaml` file in the correct path as specified in section ***4️⃣ Prepare dataset and config***, and paste the following content:
