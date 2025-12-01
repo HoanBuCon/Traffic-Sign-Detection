@@ -153,8 +153,8 @@ class TrafficSignTrainer:
             exist_ok=True,
         )
 
-        best = Path("runs/traffic_sign_detection/weights/best.pt")
-        last = Path("runs/traffic_sign_detection/weights/last.pt")
+        best = Path("runs/detect/traffic_sign_detection/weights/best.pt")
+        last = Path("runs/detect/traffic_sign_detection/weights/last.pt")
         train_dir = Path(self.all_weight_dir) / f"train_{datetime.datetime.now():%Y%m%d_%H%M%S}"
         train_dir.mkdir(parents=True, exist_ok=True)
 
@@ -204,6 +204,55 @@ class TrafficSignTrainer:
         except Exception as e:
             print(f"\nError during validation: {str(e)}")
             raise
+
+    def _get_latest_best_model(self):
+        """Tìm file best.pt trong thư mục lưu trữ gần nhất (do hàm train vừa tạo ra)"""
+        try:
+            # Đường dẫn nơi chứa các folder train_... (định nghĩa trong config)
+            base_path = Path(self.all_weight_dir)
+            
+            if not base_path.exists():
+                # Nếu chưa có folder custom, trả về đường dẫn mặc định của YOLO
+                return str(Path("runs/detect/traffic_sign_detection/weights/best.pt"))
+
+            # Lấy tất cả thư mục con bắt đầu bằng 'train_'
+            dirs = [d for d in base_path.iterdir() if d.is_dir() and d.name.startswith('train_')]
+            
+            if not dirs:
+                # Nếu không tìm thấy folder train nào, trả về mặc định
+                return str(Path("runs/detect/traffic_sign_detection/weights/best.pt"))
+            
+            # Tìm thư mục có thời gian sửa đổi mới nhất (vừa train xong)
+            latest_dir = max(dirs, key=lambda d: d.stat().st_mtime)
+            
+            return str(latest_dir / "best.pt")
+        except Exception as e:
+            print(f"Lỗi khi tìm model: {e}")
+            return "runs/detect/traffic_sign_detection/weights/best.pt"
+
+    def test(self, model_path: str = None):
+        """Hàm test trên tập kiểm thử (Test Set)"""
+        if model_path is None:
+            model_path = self._get_latest_best_model()
+            
+        print(f"\n[INFO] Starting Testing on Test Set with model: {model_path}")
+        if not os.path.exists(model_path):
+            print(f"Không tìm thấy model tại {model_path} để test.")
+            return
+
+        model = YOLO(model_path)
+        
+        # Chạy validation nhưng trên tập dữ liệu 'test'
+        # Lưu ý: split='test' yêu cầu file yaml phải khai báo đường dẫn 'test:'
+        results = model.val(
+            data=self.data_yaml_resolved,
+            split='test',  
+            imgsz=self.config.IMAGE_SIZE,
+            batch=self.config.BATCH_SIZE,
+            device=0 if torch.cuda.is_available() else 'cpu',
+            verbose=True
+        )
+        return results
 
 def main():
     """Main function to run training"""

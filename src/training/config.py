@@ -17,7 +17,7 @@ class Config:
     # Model
     MODEL_SIZE = "yolov8m.pt"  # Using YOLOv8m as specified
     EPOCHS = 100
-    BATCH_SIZE = 16
+    BATCH_SIZE = 8
     IMAGE_SIZE = 640
 
     # Training
@@ -63,7 +63,7 @@ class Config:
     LAST_MODEL_PATH = os.path.join(ALL_WEIGHT_DIR, "last_traffic_sign_model.pt")
 
     # Workers
-    WORKERS = 4
+    WORKERS = 2
 
     @classmethod
     def create_directories(cls):
